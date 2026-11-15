@@ -1,26 +1,159 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), var(--font-bangla), system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-bangla), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-bangla: var(--font-bangla), system-ui, sans-serif;
+
+  /* Stage */
+  --color-ink-950: #0a0818;
+  --color-ink-900: #110e26;
+  --color-ink-800: #1a1638;
+  --color-ink-700: #272150;
+  --color-ink-600: #3a3270;
+  /* Text on the stage */
+  --color-haze: #b9b3d9;
+  --color-cream: #f7f0df;
+  /* The one accent */
+  --color-gold: #f6c453;
+  --color-gold-deep: #c98f1a;
+  /* Semantic */
+  --color-stamp: #ff5470;
+  --color-go: #4ade80;
+  /* Answer tiles */
+  --color-tile-a: #ff5470;
+  --color-tile-b: #4d9dff;
+  --color-tile-c: #f6c453;
+  --color-tile-d: #3ddc97;
+
+  --animate-pop: pop 0.25s ease-out both;
+  --animate-rise: rise 0.35s ease-out both;
+  --animate-flicker: flicker 0.9s ease-in-out infinite alternate;
+  --animate-bulbs: bulbs 1.2s steps(2) infinite;
+  --animate-drift: drift 9s linear infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@keyframes pop {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes rise {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes flicker {
+  from { transform: scale(1) rotate(-3deg); opacity: 0.9; }
+  to { transform: scale(1.12, 1.2) rotate(3deg); opacity: 1; }
+}
+@keyframes bulbs {
+  50% { opacity: 0.35; }
+}
+@keyframes drift {
+  from { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  to { transform: translateY(110vh) rotate(540deg); opacity: 0.9; }
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ink-950);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+}
+
+/* The stage backdrop: two spotlights over deep ink, plus a faint dossier grid. */
+.stage {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(60% 50% at 15% 0%, rgb(246 196 83 / 0.16), transparent 70%),
+    radial-gradient(55% 45% at 90% 5%, rgb(255 84 112 / 0.14), transparent 70%),
+    radial-gradient(80% 60% at 50% 110%, rgb(77 157 255 / 0.12), transparent 70%),
+    var(--color-ink-950);
+}
+.stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  pointer-events: none;
+}
+
+.panel {
+  background: rgb(26 22 56 / 0.72);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(8px);
+}
+
+/* Paper "case file" card */
+.file-card {
+  background: var(--color-cream);
+  color: var(--color-ink-900);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 18px 40px -18px rgb(0 0 0 / 0.7);
+}
+
+.stamp {
+  display: inline-block;
+  border: 2px solid currentColor;
+  border-radius: 0.35rem;
+  padding: 0.15em 0.6em;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transform: rotate(-4deg);
+}
+
+.gold-text {
+  background: linear-gradient(180deg, #ffe9a8 0%, var(--color-gold) 45%, var(--color-gold-deep) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Marquee bulbs along the top of a block */
+.bulbs {
+  height: 10px;
+  background-image: radial-gradient(circle, var(--color-gold) 3px, transparent 4px);
+  background-size: 28px 10px;
+  animation: var(--animate-bulbs);
+  filter: drop-shadow(0 0 6px rgb(246 196 83 / 0.8));
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  background: rgb(10 8 24 / 0.6);
+  padding: 0.7rem 0.9rem;
+  font-size: 1rem; /* 16px: stops iOS zooming on focus */
+  color: var(--color-cream);
+}
+.input::placeholder {
+  color: rgb(185 179 217 / 0.6);
 }

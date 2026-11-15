@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Birthday Files: Mez Edition
 
-## Getting Started
+An interactive, AI-hosted birthday game show for 21 November 2026. A laptop runs the private host dashboard, a TV shows the show, and guests play from their phones.
 
-First, run the development server:
+**Status: Milestone 1 — a working multiplayer prototype on mock data.** No Supabase, no Casper API, no deployment yet.
+
+## Run it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000 — fine for one machine
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+To play with real phones on the same Wi-Fi, use the production server (the dev server blocks requests from other devices by default):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run party        # builds, then serves on 0.0.0.0:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Laptop: open `/admin`, enter the host key (`mez-host` unless `HOST_KEY` is set).
+2. TV (second window or screen): open `/display`. It shows a QR code pointing at the laptop's LAN address.
+3. Phones: scan the QR code, pick a name, play.
 
-## Learn More
+## Screens
 
-To learn more about Next.js, take a look at the following resources:
+| Route | Device | Purpose |
+| --- | --- | --- |
+| `/admin` | Laptop, private | Run of show, answer key, live tallies, bonus points, message moderation, Casper language |
+| `/display` | TV | Lobby + QR, questions, reveal, leaderboard, message wall, cake, finale, Casper captions |
+| `/play` | Phones | Join, answer, send messages, blow out candles |
+| `/invite` | Shared link | Invitation, countdown, message drop |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Checks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run check        # lint + typecheck + unit tests + production build
+```
 
-## Deploy on Vercel
+## Docs
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it fits together and what gets swapped for Supabase and Casper
+- [docs/MILESTONES.md](docs/MILESTONES.md) — what is done, what is next
