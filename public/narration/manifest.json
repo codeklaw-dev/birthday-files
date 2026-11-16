@@ -1,53 +1,47 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T13:29:18.908Z",
+  "generatedAt": "2026-11-16T14:25:00.271Z",
   "clips": {
     "lobby_welcome": {
       "en": {
         "file": "en/lobby_welcome.mp3",
         "text": "Welcome to The Birthday Files! I'm Inspector Byte, your host. Scan the code on screen and open your case file.",
-        "provider": "espeak",
-        "bytes": 61067,
-        "placeholder": true
+        "provider": "gemini",
+        "bytes": 58797
       },
       "bn": {
         "file": "bn/lobby_welcome.mp3",
         "text": "দ্য বার্থডে ফাইলস-এ স্বাগতম! আমি ইন্সপেক্টর বাইট, আজকের উপস্থাপক। স্ক্রিনের কোডটি স্ক্যান করে আপনার কেস ফাইল খুলুন।",
-        "provider": "espeak",
-        "bytes": 87398,
-        "placeholder": true
+        "provider": "gemini",
+        "bytes": 77613
       }
     },
     "lobby_filler": {
       "en": {
         "file": "en/lobby_filler.mp3",
         "text": "Still waiting for a few detectives. Don't worry, Mez has waited years for this.",
-        "provider": "espeak",
-        "bytes": 42885,
-        "placeholder": true
+        "provider": "gemini",
+        "bytes": 47469
       },
       "bn": {
         "file": "bn/lobby_filler.mp3",
         "text": "আরও কয়েকজন গোয়েন্দার অপেক্ষায় আছি। চিন্তা নেই, মেজ এই দিনের জন্য বছরের পর বছর অপেক্ষা করেছে।",
-        "provider": "espeak",
-        "bytes": 70262,
-        "placeholder": true
+        "provider": "gemini",
+        "bytes": 55917
       }
     },
     "show_start": {
       "en": {
         "file": "en/show_start.mp3",
         "text": "Phones up, detectives. The investigation into Mez begins now!",
-        "provider": "espeak",
-        "bytes": 37243,
-        "placeholder": true
+        "provider": "gemini",
+        "bytes": 42093
       },
       "bn": {
         "file": "bn/show_start.mp3",
         "text": "গোয়েন্দারা, ফোন হাতে নিন। মেজকে নিয়ে তদন্ত এখনই শুরু!",
-        "provider": "espeak",
-        "bytes": 43094,
-        "placeholder": true
+        "provider": "gemini",
+        "bytes": 38829
       }
     },
     "question_generic": {
