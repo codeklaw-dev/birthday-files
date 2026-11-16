@@ -17,7 +17,11 @@ export const GEMINI_DEFAULTS = {
   tts: "gemini-3.8-flash-lite-tts",
   llm: "gemini-3.5-flash-lite",
   voice: "Kore",
-  style: "Read this like a warm, upbeat game-show host:",
+  /**
+   * Optional style prompt put before the text. Off by default: in testing,
+   * gemini-3.8-flash-lite-tts read the instruction aloud instead of following it.
+   */
+  style: "",
 };
 
 interface GenerateResponse {
@@ -47,7 +51,7 @@ export const geminiTts: TtsProvider = {
   langs: ["en", "bn"],
   configured: () => !!key(),
   async synthesize({ text, signal }) {
-    const style = process.env.GEMINI_TTS_STYLE ?? GEMINI_DEFAULTS.style;
+    const style = env("GEMINI_TTS_STYLE") || GEMINI_DEFAULTS.style;
     const r = await generate(
       env("GEMINI_TTS_MODEL") || GEMINI_DEFAULTS.tts,
       {

@@ -20,6 +20,8 @@ const { chromium } = require("playwright");
 const SHOTS = process.env.SHOTS || path.resolve(".cache/e2e");
 mkdirSync(SHOTS, { recursive: true });
 const KEY = "mez-host";
+// Never spend real cloud quota in tests, even if .env.local has keys.
+const MOCKS = { HOST_TTS_CHAIN: "mock", HOST_LLM_CHAIN: "mock", HOST_STT_CHAIN: "mock", HOST_KEY: KEY };
 const results = [];
 const ok = (cond, msg) => {
   if (!cond) throw new Error(`FAILED: ${msg}`);
@@ -95,7 +97,7 @@ async function openShow(browser, base, phones) {
 
 async function runA(browser) {
   const base = "http://localhost:3401";
-  const server = startServer(3401, { ROOM_PERSIST: "off", TTS_CACHE_DIR: mkdtempSync(path.join(tmpdir(), "bf-tts-")) });
+  const server = startServer(3401, { ...MOCKS, ROOM_PERSIST: "off", TTS_CACHE_DIR: mkdtempSync(path.join(tmpdir(), "bf-tts-")) });
   await server.ready();
   try {
     const { tv, admin, players } = await openShow(browser, base, ["Rafi", "Tania"]);
@@ -182,7 +184,7 @@ async function runA(browser) {
 async function runB(browser) {
   const base = "http://localhost:3402";
   const dataDir = mkdtempSync(path.join(tmpdir(), "bf-room-"));
-  const env = { ROOM_DATA_DIR: dataDir, HOST_TTS_CHAIN: "mock-fail", HOST_NO_MOCK: "1", TTS_CACHE_DIR: mkdtempSync(path.join(tmpdir(), "bf-tts-")) };
+  const env = { ...MOCKS, ROOM_DATA_DIR: dataDir, HOST_TTS_CHAIN: "mock-fail", HOST_NO_MOCK: "1", TTS_CACHE_DIR: mkdtempSync(path.join(tmpdir(), "bf-tts-")) };
   let server = startServer(3402, env);
   await server.ready();
   const { tv, admin, players } = await openShow(browser, base, ["Nadia"]);

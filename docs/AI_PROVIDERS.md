@@ -10,7 +10,7 @@ Researched 16 November 2026. All AI inference runs in the cloud; the laptop only
 | --- | --- | --- | --- |
 | Speech (TTS), English + Bangla | **Gemini API** (Google AI Studio key) | Azure Speech *(needs your approval: card at sign-up)* | Only free, no-card option found that lists Bangla. Azure has the best Bangladeshi voices. |
 | Pre-recorded narration | Rendered once with Gemini via `npm run narration:render` | Your own recorded voice lines, or Azure | Pre-recorded clips play instantly and don't need the internet, so quota and latency stop being risks. |
-| Commentary (LLM) | **Gemini Flash-Lite** | **Groq** (no card), then Cloudflare Workers AI | Gemini writes better Bangla. Groq is fast and free. |
+| Commentary (LLM) | **Gemini Flash-Lite** | **Groq** `qwen/qwen3.8-27b` (no card), then Cloudflare Workers AI | Both tested with good Bangla. Groq is faster; Gemini occasionally reports "high demand". |
 | Listening (STT) | **Groq Whisper large-v3-turbo** | Gemini audio understanding, then Cloudflare Whisper | Groq has the clearest documented free allowance (28,800 audio-seconds a day). |
 | Last resort | Robotic offline placeholder clips → browser voice → captions | | The show never stops. |
 
@@ -46,9 +46,27 @@ Optional, **only with approval** (both require a credit/debit card on the accoun
 | **Sarvam AI** | Reportedly no | ₹100 credits on sign-up | bn-IN (Indian accent) | Not built. Strong Indic voices, but an Indian rather than Bangladeshi accent. |
 | **Hugging Face** | No | Inference Providers: $0.10/month for free accounts. Spaces: CPU Basic documented as free (sleeps after 48 h idle), but 2026 forum threads report staff saying it needs PRO. | MMS-TTS `facebook/mms-tts-ben` exists (CC-BY-NC) | **Not reliable for live use.** Cold starts, sleeping Spaces, disputed free CPU, no free GPU. At most useful for one-off pre-rendering. |
 
+## Live test results (16 November 2026, free keys)
+
+Measured from the build container with `npm run host:check` and direct API calls.
+
+| Check | Result |
+| --- | --- |
+| Gemini models visible to a free key | 64, including `gemini-3.8-flash-lite-tts` (default), `gemini-3.8-flash-tts`, `gemini-3.1-flash-tts-preview`, `gemini-2.5-flash-preview-tts`, and `gemini-3.5-flash-lite` (default LLM) |
+| Gemini TTS, English | ~2.3 s per line; transcribed back word-for-word (100%) |
+| Gemini TTS, Bangla | ~1.9 s per line; clearly Bangla when transcribed back. A native speaker still needs to judge pronunciation. |
+| Gemini TTS style prompt | **Read aloud** by the Flash-Lite TTS model ("Read this like a game-show host: …"), so it is now off by default |
+| Gemini free TTS quota | Hit a **per-minute** limit after about 5 requests; it cleared within a minute. Pre-rendering runs at about one clip a minute. |
+| Gemini LLM (3.5 Flash-Lite) | ~0.8 s, natural Bangla in Bengali script; one transient HTTP 503 "high demand" (the router fails over) |
+| Groq models visible to a free key | 11. `llama-3.3-70b-versatile` is **not** offered. `qwen/qwen3.8-27b` (now default, ~0.4–0.9 s) and `openai/gpt-oss-120b` (~1.4 s) both write good Bangla; `gpt-oss-20b` returned empty replies. |
+| Groq Whisper turbo, English | 0.4–0.6 s, word-for-word |
+| Groq Whisper turbo, Bangla | With the language set: correct Bengali script in ~0.3–0.4 s. With auto-detect it wrote **Gujarati script**, so the adapter now retries as Bangla automatically (~0.6 s total). |
+
+So for push-to-talk, a round trip is roughly 0.6 s to hear, about 1 s to write a reply, and about 2 s to speak it.
+
 ### Latency
 
-Real cloud latency could not be measured from the build environment (no keys, and most provider hosts are blocked there). What we know:
+Measured figures are in the table above. How the app hides latency:
 - Pre-recorded clips: first sound in about 0.1–1.1 s in the end-to-end test, with no network needed.
 - Live lines are pre-generated on the server the moment they're triggered, cached, and fetched by the TV with a 7 s cap before it falls back to a recorded clip.
 - Push-to-talk adds STT and LLM round trips. Expect a few seconds in total; `host:check` and the dashboard's *Voice system* panel show real numbers once keys exist.

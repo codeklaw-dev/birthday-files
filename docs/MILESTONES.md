@@ -23,21 +23,23 @@ The party is on **21 November 2026**. Re-planned on 16 November around the new r
 - [x] Narration render pipeline (`npm run narration:render`): resumable and quota-aware
 - [x] 46 robotic **placeholder** clips (offline espeak-ng) so the audio path works today; to be replaced with real voice
 
-## Milestone 3 — Cloud TTS (English + Bangla) ⏳ needs a free key
+## Milestone 3 — Cloud TTS (English + Bangla) ✅ verified with free keys
 
 - [x] Researched providers: see [AI_PROVIDERS.md](AI_PROVIDERS.md)
 - [x] Adapters: Gemini (TTS, LLM, STT), Groq (LLM, STT), Cloudflare (LLM, STT), Azure (TTS, approval needed)
 - [x] Failover router with timeouts, circuit breaker and stats; server-side caching and pre-warming
 - [x] `npm run host:check`: model discovery, EN/BN samples, speech→text round trip, latency
-- [ ] **You:** create a Gemini API key (free, no card) and put it in `.env.local`
-- [ ] Run `host:check`, then `narration:render` to replace the placeholders with real voice
-- [ ] Native speaker reviews the Bangla lines and clips
+- [x] Gemini key in `.env.local`; `host:check` passes; English and Bangla speech verified (see the live results in AI_PROVIDERS.md)
+- [x] Fixed after live testing: the spoken style prompt, and the Groq default model
+- [x] `narration:render` with Gemini (about one clip a minute on the free quota)
+- [ ] Native speaker listens to the Bangla clips; adjust the script and re-render the clips that change
 
-## Milestone 4 — Live push-to-talk ✅ (mock) / ⏳ (real)
+## Milestone 4 — Live push-to-talk ✅
 
 - [x] Hold-to-talk on the dashboard → cloud STT → LLM reply in the guest's language → spoken on the TV
 - [x] Language hint, auto-speak toggle, transcript and timing display
-- [ ] Real run with a Groq key; tune prompts for Bangla replies
+- [x] Groq Whisper and LLM verified live; Bangla auto-detect fixed (retries when Whisper picks the wrong Indic script)
+- [ ] Try it with real voices through the laptop microphone in the venue
 
 ## Milestone 5 — Failover, playback, latency, full rehearsal
 

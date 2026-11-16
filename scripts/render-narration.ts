@@ -73,6 +73,20 @@ async function synth(text: string, lang: Lang): Promise<{ audio: Audio; provider
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Free tiers often cap requests per minute: on HTTP 429, wait and retry before giving up. */
+async function withRetry<T>(fn: () => Promise<T>, tries = 4): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i >= tries || !/429|quota|rate limit/i.test((err as Error).message)) throw err;
+      const wait = 30_000 * i;
+      process.stdout.write(`rate-limited, waiting ${wait / 1000}s … `);
+      await sleep(wait);
+    }
+  }
+}
+
 async function main() {
   const keys = only ?? CLIP_KEYS;
   let made = 0;
@@ -93,7 +107,7 @@ async function main() {
       process.stdout.write(`• ${key} [${lang}] … `);
       try {
         const t0 = Date.now();
-        const { audio, provider: used } = await synth(line[lang], lang);
+        const { audio, provider: used } = await withRetry(() => synth(line[lang], lang));
         const { bytes, ext } = compress(audio);
         const file = `${lang}/${key}.${ext}`;
         mkdirSync(path.join(OUT, lang), { recursive: true });

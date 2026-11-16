@@ -114,6 +114,18 @@ describe("Groq (OpenAI-compatible)", () => {
     expect(form.get("file")).toBeInstanceOf(Blob);
   });
 
+  it("retries as Bangla when auto-detect returns another Indic script", async () => {
+    let n = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      calls.push({ url: String(url), init: init ?? {} });
+      return Response.json(n++ === 0 ? { text: "શુભજણમ દીનમે", language: "gujarati" } : { text: "শুভ জন্মদিন মেজ", language: "bengali" });
+    });
+    const r = await groqStt.transcribe({ audio: { bytes: new Uint8Array([1]), mime: "audio/wav" }, signal: signal() });
+    expect(r).toEqual({ text: "শুভ জন্মদিন মেজ", lang: "bn" });
+    expect((calls[0].init.body as FormData).get("language")).toBeNull();
+    expect((calls[1].init.body as FormData).get("language")).toBe("bn");
+  });
+
   it("reads chat completions", async () => {
     respond({ choices: [{ message: { content: "hello" } }] });
     expect(await groqLlm.complete({ system: "s", prompt: "p", maxTokens: 10, signal: signal() })).toBe("hello");
