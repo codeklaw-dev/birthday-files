@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T14:25:00.271Z",
+  "generatedAt": "2026-11-16T14:49:41.790Z",
   "clips": {
     "lobby_welcome": {
       "en": {
@@ -48,160 +48,140 @@
       "en": {
         "file": "en/question_generic.mp3",
         "text": "New evidence on screen. Fingers on phones. How well do you really know Mez?",
-        "provider": "espeak",
-        "bytes": 42258,
-        "placeholder": true
+        "provider": "gemini",
+        "bytes": 52077
       },
       "bn": {
         "file": "bn/question_generic.mp3",
         "text": "স্ক্রিনে নতুন প্রমাণ। ফোন হাতে নিন। মেজকে আসলে কতটা চেনেন?",
-        "provider": "espeak",
-        "bytes": 48946,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 39597
       }
     },
     "question_last": {
       "en": {
         "file": "en/question_last.mp3",
         "text": "Final question! Make it count.",
-        "provider": "espeak",
-        "bytes": 20942,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 21549
       },
       "bn": {
         "file": "bn/question_last.mp3",
         "text": "শেষ প্রশ্ন! ভেবেচিন্তে উত্তর দিন।",
-        "provider": "espeak",
-        "bytes": 27003,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 25197
       }
     },
     "time_warning": {
       "en": {
         "file": "en/time_warning.mp3",
         "text": "Five seconds left!",
-        "provider": "espeak",
-        "bytes": 13210,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 14829
       },
       "bn": {
         "file": "bn/time_warning.mp3",
         "text": "আর মাত্র পাঁচ সেকেন্ড!",
-        "provider": "espeak",
-        "bytes": 17390,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 16173
       }
     },
     "reveal_generic": {
       "en": {
         "file": "en/reveal_generic.mp3",
         "text": "Time's up! Let's see who cracked the case.",
-        "provider": "espeak",
-        "bytes": 27003,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 25197
       },
       "bn": {
         "file": "bn/reveal_generic.mp3",
         "text": "সময় শেষ! দেখি কে কেসটা সমাধান করলেন।",
-        "provider": "espeak",
-        "bytes": 35153,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 30573
       }
     },
     "reveal_nobody": {
       "en": {
         "file": "en/reveal_nobody.mp3",
         "text": "Nobody got it. Mez remains a mystery.",
-        "provider": "espeak",
-        "bytes": 23241,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 32877
       },
       "bn": {
         "file": "bn/reveal_nobody.mp3",
         "text": "কেউই পারলেন না। মেজ এখনও এক রহস্য।",
-        "provider": "espeak",
-        "bytes": 32227,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 32109
       }
     },
     "reveal_everyone": {
       "en": {
         "file": "en/reveal_everyone.mp3",
         "text": "Everyone got it! Mez, you are an open book.",
-        "provider": "espeak",
-        "bytes": 26376,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 33453
       },
       "bn": {
         "file": "bn/reveal_everyone.mp3",
         "text": "সবাই পেরেছেন! মেজ, তুমি তো খোলা বইয়ের মতো।",
-        "provider": "espeak",
-        "bytes": 37034,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 34797
       }
     },
     "leaderboard_generic": {
       "en": {
         "file": "en/leaderboard_generic.mp3",
         "text": "Here are the standings. Some of you should be worried.",
-        "provider": "espeak",
-        "bytes": 25540,
-        "placeholder": true
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 30573
       },
       "bn": {
         "file": "bn/leaderboard_generic.mp3",
         "text": "এই হলো স্কোরবোর্ড। কারও কারও একটু চিন্তা করা উচিত।",
-        "provider": "espeak",
-        "bytes": 43094,
-        "placeholder": true
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 35949
       }
     },
     "messages_intro": {
       "en": {
         "file": "en/messages_intro.mp3",
         "text": "Let's open the evidence locker: your messages for Mez.",
-        "provider": "espeak",
-        "bytes": 28675,
-        "placeholder": true
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 35373
       },
       "bn": {
         "file": "bn/messages_intro.mp3",
         "text": "চলুন প্রমাণের বাক্স খুলি: মেজের জন্য আপনাদের বার্তা।",
-        "provider": "espeak",
-        "bytes": 39333,
-        "placeholder": true
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 34029
       }
     },
     "cake_intro": {
       "en": {
         "file": "en/cake_intro.mp3",
         "text": "Cake time! Everybody tap your phones to blow out the candles!",
-        "provider": "espeak",
-        "bytes": 35571,
-        "placeholder": true
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 38253
       },
       "bn": {
         "file": "bn/cake_intro.mp3",
         "text": "কেকের সময়! সবাই ফোনে ট্যাপ করে মোমবাতি নিভিয়ে দিন!",
-        "provider": "espeak",
-        "bytes": 40587,
-        "placeholder": true
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 35373
       }
     },
     "cake_done": {
       "en": {
         "file": "en/cake_done.mp3",
         "text": "The candles are out. Happy birthday, Mez!",
-        "provider": "espeak",
-        "bytes": 25958,
-        "placeholder": true
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 29229
       },
       "bn": {
         "file": "bn/cake_done.mp3",
         "text": "মোমবাতি নিভে গেছে। শুভ জন্মদিন, মেজ!",
-        "provider": "espeak",
-        "bytes": 34108,
-        "placeholder": true
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 32109
       }
     },
     "finale_generic": {

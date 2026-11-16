@@ -64,7 +64,8 @@ export function chain<K extends ProviderKind>(kind: K): AnyProvider[] {
   const names = (env(`HOST_${kind.toUpperCase()}_CHAIN`) || DEFAULT_CHAIN[kind]).split(",").map((s) => s.trim()).filter(Boolean);
   const reg = REGISTRY[kind] as Record<string, AnyProvider>;
   const list = names.map((n) => reg[n]).filter(Boolean);
-  if (!list.some((p) => p.id === "mock") && env("HOST_NO_MOCK") !== "1") list.push(reg.mock);
+  if (env("HOST_NO_MOCK") === "1") return list.filter((p) => !p.id.startsWith("mock") || p.id === "mock-fail" || p.id === "mock-slow");
+  if (!list.some((p) => p.id === "mock")) list.push(reg.mock);
   return list;
 }
 
@@ -82,6 +83,12 @@ export interface Routed<T> {
   ms: number;
   attempts: Attempt[];
 }
+
+/**
+ * Mock TTS is a beep, not speech. Serve it only when explicitly allowed (tests,
+ * demos); otherwise the TV should fall back to a recorded clip or captions.
+ */
+export const mockAudioAllowed = () => env("HOST_ALLOW_MOCK_AUDIO") === "1";
 
 export class AllProvidersFailed extends Error {
   constructor(readonly attempts: Attempt[]) {

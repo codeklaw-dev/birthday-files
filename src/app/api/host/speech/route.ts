@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import type { Lang } from "@/lib/game/types";
-import { AllProvidersFailed } from "@/lib/host/server/router";
+import { AllProvidersFailed, mockAudioAllowed } from "@/lib/host/server/router";
 import { ensureHostService } from "@/lib/host/server/service";
 import { speech } from "@/lib/host/server/speech-cache";
 import { roomStore } from "@/lib/server/room-store";
@@ -20,6 +20,9 @@ export async function GET(req: NextRequest) {
   if (u.lang !== "both" && u.lang !== lang) return Response.json({ error: "Line is not spoken in that language." }, { status: 404 });
   try {
     const r = await speech(u.text[lang], lang);
+    if (r.provider.startsWith("mock") && !mockAudioAllowed()) {
+      return Response.json({ error: "No cloud voice available right now.", attempts: r.attempts }, { status: 503 });
+    }
     return new Response(new Blob([r.audio.bytes], { type: r.audio.mime }), {
       headers: {
         "Content-Type": r.audio.mime,

@@ -390,6 +390,7 @@ export function PushToTalk({ hostKey }: { hostKey: string }) {
 interface StatusBody {
   chains: { kind: string; providers: { id: string; configured: boolean; resting: boolean; calls: number; failures: number; avgMs: number | null; lastError: string | null }[] }[];
   narration: { total: number; en: number; bn: number; placeholders: number; stale: number };
+  geminiVoices: { model: string; available: boolean; until: number | null }[];
   playback: { utteranceId: string; lang: Lang; via: string; provider?: string; latencyMs: number; error?: string; at: number }[];
 }
 
@@ -432,6 +433,18 @@ export function HostStatus({ hostKey }: { hostKey: string }) {
             </p>
           )}
         </div>
+        {status.geminiVoices.length > 0 && (
+          <div>
+            <div className="mb-1 text-xs uppercase tracking-widest text-haze">Gemini voice quota (10 lines/day per model, free tier)</div>
+            <ul className="flex flex-col gap-0.5 font-mono text-xs">
+              {status.geminiVoices.map((v) => (
+                <li key={v.model} className={v.available ? "text-cream" : "text-stamp"}>
+                  {v.model} — {v.available ? "available" : `used up until ${new Date(v.until!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {status.chains.map((c) => (
           <div key={c.kind}>
             <div className="mb-1 text-xs uppercase tracking-widest text-haze">

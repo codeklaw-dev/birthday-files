@@ -22,6 +22,7 @@ mkdirSync(SHOTS, { recursive: true });
 const KEY = "mez-host";
 // Never spend real cloud quota in tests, even if .env.local has keys.
 const MOCKS = { HOST_TTS_CHAIN: "mock", HOST_LLM_CHAIN: "mock", HOST_STT_CHAIN: "mock", HOST_KEY: KEY };
+// Server A lets the beeping mock stand in for live speech so the live path can be tested.
 const results = [];
 const ok = (cond, msg) => {
   if (!cond) throw new Error(`FAILED: ${msg}`);
@@ -97,7 +98,7 @@ async function openShow(browser, base, phones) {
 
 async function runA(browser) {
   const base = "http://localhost:3401";
-  const server = startServer(3401, { ...MOCKS, ROOM_PERSIST: "off", TTS_CACHE_DIR: mkdtempSync(path.join(tmpdir(), "bf-tts-")) });
+  const server = startServer(3401, { ...MOCKS, HOST_ALLOW_MOCK_AUDIO: "1", ROOM_PERSIST: "off", TTS_CACHE_DIR: mkdtempSync(path.join(tmpdir(), "bf-tts-")) });
   await server.ready();
   try {
     const { tv, admin, players } = await openShow(browser, base, ["Rafi", "Tania"]);

@@ -14,6 +14,12 @@ Researched 16 November 2026. All AI inference runs in the cloud; the laptop only
 | Listening (STT) | **Groq Whisper large-v3-turbo** | Gemini audio understanding, then Cloudflare Whisper | Groq has the clearest documented free allowance (28,800 audio-seconds a day). |
 | Last resort | Robotic offline placeholder clips → browser voice → captions | | The show never stops. |
 
+**The real constraint is Gemini's free voice quota: about 30 lines a day across three models** (measured). Hence:
+1. Pre-record every fixed line before the party (`npm run narration:render`, once a day until done). That leaves the party day's whole quota for live lines.
+2. On the night, use **Auto** language mode (one language per line, both only for big moments). *Both* doubles the cost of every live line.
+3. When the quota runs out mid-show, live lines fall back to their recorded generic clip, then captions. The mock beep is never played to guests.
+4. If you want unlimited live voice, the clean fix is Azure Speech (0.5M characters/month free, best Bangladeshi voices), but it needs a card on the Azure account, so only with your approval.
+
 **Expected cost for the party: $0.** The whole night is a few thousand characters of speech, a few dozen LLM calls and a few minutes of listening, which is far inside every free tier listed. No card is needed for Gemini, Groq or Cloudflare. A cost only appears if you approve Azure or Google Cloud, which need a card on file, and even then this volume stays inside their free allowances.
 
 ## What to set up (about 10 minutes)
@@ -56,7 +62,7 @@ Measured from the build container with `npm run host:check` and direct API calls
 | Gemini TTS, English | ~2.3 s per line; transcribed back word-for-word (100%) |
 | Gemini TTS, Bangla | ~1.9 s per line; clearly Bangla when transcribed back. A native speaker still needs to judge pronunciation. |
 | Gemini TTS style prompt | **Read aloud** by the Flash-Lite TTS model ("Read this like a game-show host: …"), so it is now off by default |
-| Gemini free TTS quota | Hit a **per-minute** limit after about 5 requests; it cleared within a minute. Pre-rendering runs at about one clip a minute. |
+| Gemini free TTS quota | **10 requests per day per model** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, limit 10), resetting at midnight US Pacific time (08:00 UTC). There is also a short per-minute limit. Three TTS models worked (`3.8-flash-lite-tts`, `3.8-flash-tts`, `3.1-flash-tts-preview`), so the adapter rotates through them: **about 30 spoken lines a day**. `2.5-flash-preview-tts` timed out and is not used. |
 | Gemini LLM (3.5 Flash-Lite) | ~0.8 s, natural Bangla in Bengali script; one transient HTTP 503 "high demand" (the router fails over) |
 | Groq models visible to a free key | 11. `llama-3.3-70b-versatile` is **not** offered. `qwen/qwen3.8-27b` (now default, ~0.4–0.9 s) and `openai/gpt-oss-120b` (~1.4 s) both write good Bangla; `gpt-oss-20b` returned empty replies. |
 | Groq Whisper turbo, English | 0.4–0.6 s, word-for-word |

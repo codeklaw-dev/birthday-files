@@ -10,7 +10,8 @@ export async function call(provider: string, url: string, init: RequestInit & { 
     throw new ProviderError(provider, `network error (${(err as Error).message})`);
   }
   if (!res.ok) {
-    const body = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 240);
+    const raw = (await res.text().catch(() => "")).slice(0, 8000);
+    const body = raw.replace(/\s+/g, " ").slice(0, 240);
     const hint =
       res.status === 401 || res.status === 403
         ? "key rejected or missing permission"
@@ -19,7 +20,7 @@ export async function call(provider: string, url: string, init: RequestInit & { 
           : res.status === 404
             ? "model or endpoint not found (check the model name)"
             : "request failed";
-    throw new ProviderError(provider, `${hint} [HTTP ${res.status}] ${body}`, res.status);
+    throw new ProviderError(provider, `${hint} [HTTP ${res.status}] ${body}`, res.status, raw);
   }
   return res;
 }

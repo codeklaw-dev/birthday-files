@@ -9,6 +9,8 @@ import type { Lang } from "@/lib/game/types";
 export interface Audio {
   bytes: Uint8Array<ArrayBuffer>;
   mime: string;
+  /** Which model actually produced it, when a provider rotates between models. */
+  model?: string;
 }
 
 export interface TtsProvider {
@@ -37,6 +39,8 @@ export class ProviderError extends Error {
     readonly provider: string,
     message: string,
     readonly status?: number,
+    /** Raw error body from the API (never contains our key). */
+    readonly body?: string,
   ) {
     super(`${provider}: ${message}`);
   }

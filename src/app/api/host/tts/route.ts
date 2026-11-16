@@ -1,5 +1,5 @@
 import type { Lang } from "@/lib/game/types";
-import { AllProvidersFailed } from "@/lib/host/server/router";
+import { AllProvidersFailed, mockAudioAllowed } from "@/lib/host/server/router";
 import { speech } from "@/lib/host/server/speech-cache";
 import { isHostKey } from "@/lib/server/room-store";
 
@@ -11,6 +11,9 @@ export async function POST(req: Request) {
   if (!text || (body.lang !== "en" && body.lang !== "bn")) return Response.json({ error: "Send text and lang (en|bn)." }, { status: 400 });
   try {
     const r = await speech(text, body.lang);
+    if (r.provider.startsWith("mock") && !mockAudioAllowed()) {
+      return Response.json({ error: "No cloud voice available right now.", attempts: r.attempts }, { status: 503 });
+    }
     return new Response(new Blob([r.audio.bytes], { type: r.audio.mime }), {
       headers: { "Content-Type": r.audio.mime, "X-Host-Provider": r.cached ? "cache" : r.provider, "X-Host-Ms": String(r.ms) },
     });

@@ -55,6 +55,12 @@ describe("TTS failover", () => {
     expect(fail).toMatchObject({ resting: true, failures: 3 });
   });
 
+  it("never falls back to the mock when HOST_NO_MOCK is set, even if listed", async () => {
+    process.env.HOST_TTS_CHAIN = "mock-fail,mock";
+    process.env.HOST_NO_MOCK = "1";
+    await expect(routeTts("x", "en")).rejects.toBeInstanceOf(AllProvidersFailed);
+  });
+
   it("reports every attempt when nothing works", async () => {
     process.env.HOST_TTS_CHAIN = "mock-fail";
     process.env.HOST_NO_MOCK = "1";

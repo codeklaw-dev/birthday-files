@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { audioDurationMs, detectLang, extractJson, pcmRate, pcmToWav, speakable } from "@/lib/host/server/audio-utils";
 import { azureSsml, azureTts } from "@/lib/host/server/providers/azure";
 import { cloudflareStt } from "@/lib/host/server/providers/cloudflare";
-import { geminiLlm, geminiTts } from "@/lib/host/server/providers/gemini";
+import { exhaustedUntil, geminiLlm, geminiTts, retryAfterMs } from "@/lib/host/server/providers/gemini";
 import { groqLlm, groqStt } from "@/lib/host/server/providers/openai-compatible";
 
 const signal = () => AbortSignal.timeout(5000);
@@ -69,9 +69,32 @@ describe("Gemini", () => {
     await expect(geminiTts.synthesize({ text: "hi", lang: "en", signal: signal() })).rejects.toThrow(/no audio/);
   });
 
+  it("rotates to the next TTS model when one's daily quota is used up, and remembers it", async () => {
+    exhaustedUntil.clear();
+    const pcm = Buffer.alloc(480).toString("base64");
+    const quota = { error: { code: 429, details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "62574s" }] } };
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      calls.push({ url: String(url), init: init ?? {} });
+      return String(url).includes("flash-lite-tts")
+        ? Response.json(quota, { status: 429 })
+        : Response.json({ candidates: [{ content: { parts: [{ inlineData: { mimeType: "audio/L16;rate=24000", data: pcm } }] } }] });
+    });
+    const a = await geminiTts.synthesize({ text: "hi", lang: "en", signal: signal() });
+    expect(a.model).toBe("gemini-3.8-flash-tts");
+    expect(exhaustedUntil.get("gemini-3.8-flash-lite-tts")! - Date.now()).toBeGreaterThan(62_000_000);
+    calls = [];
+    await geminiTts.synthesize({ text: "hi again", lang: "en", signal: signal() });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toContain("gemini-3.8-flash-tts:");
+    expect(retryAfterMs('"retryDelay": "1.5s"')).toBe(1500);
+    exhaustedUntil.clear();
+  });
+
   it("explains quota errors", async () => {
+    exhaustedUntil.clear();
     respond({ error: { message: "Resource exhausted" } }, { status: 429 });
-    await expect(geminiTts.synthesize({ text: "hi", lang: "en", signal: signal() })).rejects.toThrow(/quota/);
+    await expect(geminiTts.synthesize({ text: "hi", lang: "en", signal: signal() })).rejects.toThrow(/quota used up on all 3 TTS models/);
+    exhaustedUntil.clear();
   });
 
   it("asks the LLM for JSON with a system instruction", async () => {

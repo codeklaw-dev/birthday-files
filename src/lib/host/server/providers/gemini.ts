@@ -15,6 +15,12 @@ const BASE = "https://generativelanguage.googleapis.com/v1beta";
 const key = () => env("GEMINI_API_KEY");
 export const GEMINI_DEFAULTS = {
   tts: "gemini-3.8-flash-lite-tts",
+  /**
+   * Free tier: 10 TTS requests per day *per model* (measured 16 Nov 2026), so we
+   * rotate through every TTS model that worked in testing: ~30 lines a day.
+   * gemini-2.5-flash-preview-tts is left out: it timed out in testing.
+   */
+  ttsFallbacks: ["gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview"],
   llm: "gemini-3.5-flash-lite",
   voice: "Kore",
   /**
@@ -46,14 +52,61 @@ function textOf(r: GenerateResponse): string {
   return text;
 }
 
+export function ttsModels(): string[] {
+  const list = env("GEMINI_TTS_MODELS")
+    ? env("GEMINI_TTS_MODELS").split(",")
+    : [env("GEMINI_TTS_MODEL") || GEMINI_DEFAULTS.tts, ...GEMINI_DEFAULTS.ttsFallbacks];
+  return [...new Set(list.map((m) => m.trim()).filter(Boolean))];
+}
+
+/** model → time its quota is expected back. Shared across requests in this process. */
+const g = globalThis as unknown as { __geminiExhausted?: Map<string, number> };
+export const exhaustedUntil = (g.__geminiExhausted ??= new Map());
+
+/** How long Google says to wait, from the 429 body's RetryInfo (e.g. "62574s"). */
+export function retryAfterMs(body: string | undefined): number | null {
+  const m = body ? /"retryDelay":\s*"(\d+(?:\.\d+)?)s"/.exec(body) : null;
+  return m ? Math.round(Number(m[1]) * 1000) : null;
+}
+
+export function quotaStatus(now = Date.now()) {
+  return ttsModels().map((model) => {
+    const until = exhaustedUntil.get(model) ?? 0;
+    return { model, available: until <= now, until: until > now ? until : null };
+  });
+}
+
 export const geminiTts: TtsProvider = {
   id: "gemini",
   langs: ["en", "bn"],
   configured: () => !!key(),
   async synthesize({ text, signal }) {
+    let lastError: ProviderError | null = null;
+    for (const model of ttsModels()) {
+      if ((exhaustedUntil.get(model) ?? 0) > Date.now()) continue;
+      try {
+        return { ...(await synthesizeWith(model, text, signal)), model };
+      } catch (err) {
+        if (!(err instanceof ProviderError) || err.status !== 429) throw err;
+        // Daily quota → Google says "come back in N hours"; per-minute → about a minute.
+        exhaustedUntil.set(model, Date.now() + Math.min(retryAfterMs(err.body) ?? 60_000, 24 * 3600_000));
+        lastError = err;
+      }
+    }
+    const next = Math.min(...ttsModels().map((m) => exhaustedUntil.get(m) ?? Infinity));
+    throw new ProviderError(
+      "gemini",
+      `free voice quota used up on all ${ttsModels().length} TTS models${Number.isFinite(next) ? `; next one back at ${new Date(next).toISOString()}` : ""} (rate limit)`,
+      429,
+      lastError?.body,
+    );
+  },
+};
+
+async function synthesizeWith(model: string, text: string, signal: AbortSignal) {
     const style = env("GEMINI_TTS_STYLE") || GEMINI_DEFAULTS.style;
     const r = await generate(
-      env("GEMINI_TTS_MODEL") || GEMINI_DEFAULTS.tts,
+      model,
       {
         contents: [{ parts: [{ text: style ? `${style} ${text}` : text }] }],
         generationConfig: {
@@ -70,8 +123,7 @@ export const geminiTts: TtsProvider = {
     const bytes = fromBase64(part.inlineData.data);
     if (/wav|mpeg|mp3|ogg/i.test(mime)) return { bytes, mime: mime.split(";")[0] };
     return pcmToWav(bytes, pcmRate(mime));
-  },
-};
+}
 
 export const geminiLlm: LlmProvider = {
   id: "gemini",

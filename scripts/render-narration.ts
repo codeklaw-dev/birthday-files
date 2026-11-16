@@ -64,11 +64,13 @@ async function synth(text: string, lang: Lang): Promise<{ audio: Audio; provider
   if (provider === "chain") {
     process.env.HOST_NO_MOCK = "1";
     const r = await routeTts(text, lang, 60_000);
-    return { audio: r.value, provider: r.provider };
+    if (r.provider.startsWith("mock")) throw new Error("no real voice available (rate limit / quota)");
+    return { audio: r.value, provider: r.value.model ? `${r.provider}/${r.value.model}` : r.provider };
   }
   const p = configuredProviders("tts").find((x) => x.id === provider) as TtsProvider | undefined;
   if (!p) throw new Error(`provider "${provider}" is unknown or has no key configured`);
-  return { audio: await p.synthesize({ text, lang, signal: AbortSignal.timeout(60_000) }), provider: p.id };
+  const audio = await p.synthesize({ text, lang, signal: AbortSignal.timeout(60_000) });
+  return { audio, provider: audio.model ? `${p.id}/${audio.model}` : p.id };
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -79,7 +81,9 @@ async function withRetry<T>(fn: () => Promise<T>, tries = 4): Promise<T> {
     try {
       return await fn();
     } catch (err) {
-      if (i >= tries || !/429|quota|rate limit/i.test((err as Error).message)) throw err;
+      const msg = (err as Error).message;
+      // A daily quota won't come back in a few minutes: stop and resume another day.
+      if (i >= tries || !/429|quota|rate limit/i.test(msg) || /all \d+ TTS models|PerDay/.test(msg)) throw err;
       const wait = 30_000 * i;
       process.stdout.write(`rate-limited, waiting ${wait / 1000}s … `);
       await sleep(wait);
@@ -99,7 +103,9 @@ async function main() {
     }
     for (const lang of langs) {
       const existing = manifest.clips[key]?.[lang];
-      const upToDate = existing && existing.text === line[lang] && (!existing.placeholder || provider === "espeak");
+      // Mock beeps are never acceptable narration; placeholders only count when making placeholders.
+      const upToDate =
+        existing && existing.text === line[lang] && !existing.provider.startsWith("mock") && (!existing.placeholder || provider === "espeak");
       if (upToDate && !force) {
         skipped++;
         continue;
@@ -113,7 +119,10 @@ async function main() {
         mkdirSync(path.join(OUT, lang), { recursive: true });
         for (const old of ["mp3", "wav"]) if (old !== ext) rmSync(path.join(OUT, lang, `${key}.${old}`), { force: true });
         writeFileSync(path.join(OUT, file), bytes);
-        manifest.clips[key] = { ...manifest.clips[key], [lang]: { file, text: line[lang], provider: used, bytes: bytes.length, ...(used === "espeak" ? { placeholder: true } : {}) } };
+        manifest.clips[key] = {
+          ...manifest.clips[key],
+          [lang]: { file, text: line[lang], provider: used, bytes: bytes.length, ...(used === "espeak" ? { placeholder: true } : {}) },
+        };
         save();
         made++;
         console.log(`${used}, ${(bytes.length / 1024).toFixed(0)} KB, ${Date.now() - t0} ms`);
@@ -122,7 +131,7 @@ async function main() {
         const msg = (err as Error).message;
         console.log(`FAILED: ${msg.slice(0, 300)}`);
         if (/429|quota|rate limit/i.test(msg)) {
-          console.log("\nQuota reached. Progress is saved — run the same command again later to continue.");
+          console.log(`\nQuota reached (${msg.slice(0, 160)}).\nProgress is saved — run the same command again later (free Gemini voice quotas reset daily) to continue.`);
           process.exitCode = 2;
           return;
         }

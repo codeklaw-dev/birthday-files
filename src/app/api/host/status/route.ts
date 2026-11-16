@@ -1,3 +1,4 @@
+import { quotaStatus } from "@/lib/host/server/providers/gemini";
 import { providerStatus } from "@/lib/host/server/router";
 import { ensureHostService, narrationCoverage, playbackLog } from "@/lib/host/server/service";
 import { isHostKey } from "@/lib/server/room-store";
@@ -8,6 +9,7 @@ export async function GET(req: Request) {
   if (!isHostKey(req.headers.get("x-host-key"))) return Response.json({ error: "Wrong host key." }, { status: 401 });
   return Response.json({
     chains: providerStatus(),
+    geminiVoices: process.env.GEMINI_API_KEY ? quotaStatus() : [],
     narration: narrationCoverage(),
     playback: playbackLog.slice(-12).reverse(),
   });

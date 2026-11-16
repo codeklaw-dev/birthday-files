@@ -31,7 +31,9 @@ The party is on **21 November 2026**. Re-planned on 16 November around the new r
 - [x] `npm run host:check`: model discovery, EN/BN samples, speech→text round trip, latency
 - [x] Gemini key in `.env.local`; `host:check` passes; English and Bangla speech verified (see the live results in AI_PROVIDERS.md)
 - [x] Fixed after live testing: the spoken style prompt, and the Groq default model
-- [x] `narration:render` with Gemini (about one clip a minute on the free quota)
+- [x] Rotate through 3 Gemini voice models (free tier: 10 voice lines a day per model)
+- [x] 26 of 46 clips recorded with Gemini voice on 16 Nov
+- [ ] Record the remaining 20 on 17 Nov (`npm run narration:render`), so the party day's quota stays free for live lines
 - [ ] Native speaker listens to the Bangla clips; adjust the script and re-render the clips that change
 
 ## Milestone 4 — Live push-to-talk ✅
