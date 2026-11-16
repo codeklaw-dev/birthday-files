@@ -1,3 +1,5 @@
+import type { HostLangMode, HostState, HostView, SfxKind, SpokenLang, UtteranceSource } from "@/lib/host/types";
+
 /**
  * Shared game types. These are transport-agnostic: the same shapes are used by
  * the in-memory mock store today and will map onto Supabase rows/realtime
@@ -74,8 +76,7 @@ export interface RoomState {
   messages: GuestMessage[];
   scoreLog: ScoreEvent[];
   cake: { candles: number; blows: number; perCandle: number };
-  hostLine: Bilingual;
-  hostLang: Lang | "both";
+  host: HostState;
   /** Monotonic revision, bumped on every change. */
   rev: number;
 }
@@ -111,8 +112,7 @@ export interface RoomView {
   /** Approved messages for everyone; all messages for the host. */
   messages: GuestMessage[];
   cake: { candles: number; lit: number };
-  hostLine: Bilingual;
-  hostLang: Lang | "both";
+  host: HostView;
   /** LAN hints so the display can render a QR code phones can reach. */
   lanHosts?: string[];
 }
@@ -135,7 +135,15 @@ export type HostAction =
   | { type: "host/award"; playerId: string; delta: number; reason?: string }
   | { type: "host/kick"; playerId: string }
   | { type: "host/moderate"; messageId: string; status: MessageStatus }
-  | { type: "host/setLang"; lang: Lang | "both" };
+  | { type: "host/setLang"; lang: HostLangMode }
+  | { type: "host/setVoice"; enabled: boolean }
+  | { type: "host/setAutoQuips"; enabled: boolean }
+  | { type: "host/say"; text: Partial<Bilingual>; lang?: SpokenLang; source?: Extract<UtteranceSource, "host" | "llm" | "conversation"> }
+  | { type: "host/clip"; clip: string }
+  | { type: "host/quip" }
+  | { type: "host/replay" }
+  | { type: "host/stopSpeech" }
+  | { type: "host/sfx"; kind: SfxKind };
 
 /** Fired by the server timer, never accepted from clients. */
 export type SystemAction = { type: "system/timeUp"; questionId: string };

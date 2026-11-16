@@ -155,7 +155,7 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
       {view.phase === "cake" && <CakePad room={room} view={view} token={token} />}
 
       <div className="mt-auto pt-2">
-        <HostLine line={view.hostLine} lang={view.hostLang} />
+        <HostLine host={view.host} />
       </div>
     </div>
   );

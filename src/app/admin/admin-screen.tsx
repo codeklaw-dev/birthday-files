@@ -6,6 +6,7 @@ import { Button, cx, Field, HostLine, Logo, StatusDot } from "@/components/ui";
 import { useNow, useStored } from "@/lib/client/hooks";
 import { useRoom, type RoomConnection } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
+import { HostControls, HostStatus, HostWriter, PushToTalk } from "./host-panel";
 import type { HostAction, Phase, RoomView } from "@/lib/game/types";
 
 export function AdminScreen() {
@@ -95,7 +96,11 @@ function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void })
             <Messages view={view} act={act} />
           </div>
           <div className="flex min-w-0 flex-col gap-4">
+            <HostControls view={view} act={act} />
+            <HostWriter act={act} hostKey={hostKey} />
+            <PushToTalk hostKey={hostKey} />
             <Players view={view} act={act} />
+            <HostStatus hostKey={hostKey} />
             <Roadmap />
           </div>
         </div>
@@ -164,19 +169,7 @@ function RunOfShow({ view, act, error, room }: { view: RoomView; act: Act; error
           <Button disabled={open} onClick={() => act({ type: "host/startCake" })}>Cake</Button>
           <Button disabled={phase === "finished"} onClick={() => act({ type: "host/finish" })}>Finale</Button>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
-          <div role="group" aria-label="Casper language" className="flex items-center gap-1 rounded-xl border border-white/15 p-1">
-            {(["en", "bn", "both"] as const).map((l) => (
-              <button
-                key={l}
-                aria-pressed={view.hostLang === l}
-                onClick={() => act({ type: "host/setLang", lang: l })}
-                className={cx("min-h-9 rounded-lg px-3 text-sm font-semibold", view.hostLang === l ? "bg-gold text-ink-950" : "text-haze hover:text-cream")}
-              >
-                {l === "en" ? "English" : l === "bn" ? "বাংলা" : "Both"}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-white/10 pt-4">
           <Button
             variant="danger"
             onClick={() => {
@@ -223,8 +216,7 @@ function NowShowing({ view }: { view: RoomView }) {
       ) : (
         <p className="mb-4 text-sm text-haze">{PHASE_LABEL[view.phase]} screen is showing.</p>
       )}
-      <HostLine line={view.hostLine} lang="both" />
-      <p className="mt-3 text-xs text-haze">Casper is running on the silent mock adapter: captions only, no audio.</p>
+      <HostLine host={view.host} />
     </Card>
   );
 }

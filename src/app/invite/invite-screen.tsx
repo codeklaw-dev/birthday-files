@@ -44,7 +44,7 @@ export function InviteScreen() {
             You are summoned to <span className="text-gold-deep">{EVENT.title}</span>
           </h1>
           <p className="mt-4 max-w-prose text-lg text-ink-700">
-            A live game show about {EVENT.guestOfHonour}, hosted by Casper, played from your phone. Bring your
+            A live game show about {EVENT.guestOfHonour}, hosted by an AI detective, played from your phone. Bring your
             memories, your best guesses and your worst-kept secrets.
           </p>
           <dl className="mt-8 grid gap-4 border-t border-dashed border-ink-900/25 pt-6 sm:grid-cols-3">

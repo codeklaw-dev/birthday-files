@@ -1,0 +1,374 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-16T13:29:18.908Z",
+  "clips": {
+    "lobby_welcome": {
+      "en": {
+        "file": "en/lobby_welcome.mp3",
+        "text": "Welcome to The Birthday Files! I'm Inspector Byte, your host. Scan the code on screen and open your case file.",
+        "provider": "espeak",
+        "bytes": 61067,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/lobby_welcome.mp3",
+        "text": "দ্য বার্থডে ফাইলস-এ স্বাগতম! আমি ইন্সপেক্টর বাইট, আজকের উপস্থাপক। স্ক্রিনের কোডটি স্ক্যান করে আপনার কেস ফাইল খুলুন।",
+        "provider": "espeak",
+        "bytes": 87398,
+        "placeholder": true
+      }
+    },
+    "lobby_filler": {
+      "en": {
+        "file": "en/lobby_filler.mp3",
+        "text": "Still waiting for a few detectives. Don't worry, Mez has waited years for this.",
+        "provider": "espeak",
+        "bytes": 42885,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/lobby_filler.mp3",
+        "text": "আরও কয়েকজন গোয়েন্দার অপেক্ষায় আছি। চিন্তা নেই, মেজ এই দিনের জন্য বছরের পর বছর অপেক্ষা করেছে।",
+        "provider": "espeak",
+        "bytes": 70262,
+        "placeholder": true
+      }
+    },
+    "show_start": {
+      "en": {
+        "file": "en/show_start.mp3",
+        "text": "Phones up, detectives. The investigation into Mez begins now!",
+        "provider": "espeak",
+        "bytes": 37243,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/show_start.mp3",
+        "text": "গোয়েন্দারা, ফোন হাতে নিন। মেজকে নিয়ে তদন্ত এখনই শুরু!",
+        "provider": "espeak",
+        "bytes": 43094,
+        "placeholder": true
+      }
+    },
+    "question_generic": {
+      "en": {
+        "file": "en/question_generic.mp3",
+        "text": "New evidence on screen. Fingers on phones. How well do you really know Mez?",
+        "provider": "espeak",
+        "bytes": 42258,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/question_generic.mp3",
+        "text": "স্ক্রিনে নতুন প্রমাণ। ফোন হাতে নিন। মেজকে আসলে কতটা চেনেন?",
+        "provider": "espeak",
+        "bytes": 48946,
+        "placeholder": true
+      }
+    },
+    "question_last": {
+      "en": {
+        "file": "en/question_last.mp3",
+        "text": "Final question! Make it count.",
+        "provider": "espeak",
+        "bytes": 20942,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/question_last.mp3",
+        "text": "শেষ প্রশ্ন! ভেবেচিন্তে উত্তর দিন।",
+        "provider": "espeak",
+        "bytes": 27003,
+        "placeholder": true
+      }
+    },
+    "time_warning": {
+      "en": {
+        "file": "en/time_warning.mp3",
+        "text": "Five seconds left!",
+        "provider": "espeak",
+        "bytes": 13210,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/time_warning.mp3",
+        "text": "আর মাত্র পাঁচ সেকেন্ড!",
+        "provider": "espeak",
+        "bytes": 17390,
+        "placeholder": true
+      }
+    },
+    "reveal_generic": {
+      "en": {
+        "file": "en/reveal_generic.mp3",
+        "text": "Time's up! Let's see who cracked the case.",
+        "provider": "espeak",
+        "bytes": 27003,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/reveal_generic.mp3",
+        "text": "সময় শেষ! দেখি কে কেসটা সমাধান করলেন।",
+        "provider": "espeak",
+        "bytes": 35153,
+        "placeholder": true
+      }
+    },
+    "reveal_nobody": {
+      "en": {
+        "file": "en/reveal_nobody.mp3",
+        "text": "Nobody got it. Mez remains a mystery.",
+        "provider": "espeak",
+        "bytes": 23241,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/reveal_nobody.mp3",
+        "text": "কেউই পারলেন না। মেজ এখনও এক রহস্য।",
+        "provider": "espeak",
+        "bytes": 32227,
+        "placeholder": true
+      }
+    },
+    "reveal_everyone": {
+      "en": {
+        "file": "en/reveal_everyone.mp3",
+        "text": "Everyone got it! Mez, you are an open book.",
+        "provider": "espeak",
+        "bytes": 26376,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/reveal_everyone.mp3",
+        "text": "সবাই পেরেছেন! মেজ, তুমি তো খোলা বইয়ের মতো।",
+        "provider": "espeak",
+        "bytes": 37034,
+        "placeholder": true
+      }
+    },
+    "leaderboard_generic": {
+      "en": {
+        "file": "en/leaderboard_generic.mp3",
+        "text": "Here are the standings. Some of you should be worried.",
+        "provider": "espeak",
+        "bytes": 25540,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/leaderboard_generic.mp3",
+        "text": "এই হলো স্কোরবোর্ড। কারও কারও একটু চিন্তা করা উচিত।",
+        "provider": "espeak",
+        "bytes": 43094,
+        "placeholder": true
+      }
+    },
+    "messages_intro": {
+      "en": {
+        "file": "en/messages_intro.mp3",
+        "text": "Let's open the evidence locker: your messages for Mez.",
+        "provider": "espeak",
+        "bytes": 28675,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/messages_intro.mp3",
+        "text": "চলুন প্রমাণের বাক্স খুলি: মেজের জন্য আপনাদের বার্তা।",
+        "provider": "espeak",
+        "bytes": 39333,
+        "placeholder": true
+      }
+    },
+    "cake_intro": {
+      "en": {
+        "file": "en/cake_intro.mp3",
+        "text": "Cake time! Everybody tap your phones to blow out the candles!",
+        "provider": "espeak",
+        "bytes": 35571,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/cake_intro.mp3",
+        "text": "কেকের সময়! সবাই ফোনে ট্যাপ করে মোমবাতি নিভিয়ে দিন!",
+        "provider": "espeak",
+        "bytes": 40587,
+        "placeholder": true
+      }
+    },
+    "cake_done": {
+      "en": {
+        "file": "en/cake_done.mp3",
+        "text": "The candles are out. Happy birthday, Mez!",
+        "provider": "espeak",
+        "bytes": 25958,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/cake_done.mp3",
+        "text": "মোমবাতি নিভে গেছে। শুভ জন্মদিন, মেজ!",
+        "provider": "espeak",
+        "bytes": 34108,
+        "placeholder": true
+      }
+    },
+    "finale_generic": {
+      "en": {
+        "file": "en/finale_generic.mp3",
+        "text": "Case closed! Thank you, detectives. Happy birthday, Mez!",
+        "provider": "espeak",
+        "bytes": 39960,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/finale_generic.mp3",
+        "text": "কেস সমাধান! ধন্যবাদ, গোয়েন্দারা। শুভ জন্মদিন, মেজ!",
+        "provider": "espeak",
+        "bytes": 46229,
+        "placeholder": true
+      }
+    },
+    "happy_birthday": {
+      "en": {
+        "file": "en/happy_birthday.mp3",
+        "text": "Happy birthday, Mez!",
+        "provider": "espeak",
+        "bytes": 15091,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/happy_birthday.mp3",
+        "text": "শুভ জন্মদিন, মেজ!",
+        "provider": "espeak",
+        "bytes": 18435,
+        "placeholder": true
+      }
+    },
+    "applause": {
+      "en": {
+        "file": "en/applause.mp3",
+        "text": "Give it up for our detectives!",
+        "provider": "espeak",
+        "bytes": 17181,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/applause.mp3",
+        "text": "গোয়েন্দাদের জন্য জোরে হাততালি!",
+        "provider": "espeak",
+        "bytes": 22196,
+        "placeholder": true
+      }
+    },
+    "tech_trouble": {
+      "en": {
+        "file": "en/tech_trouble.mp3",
+        "text": "One moment. My circuits need a cup of tea.",
+        "provider": "espeak",
+        "bytes": 25540,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/tech_trouble.mp3",
+        "text": "এক মিনিট। আমার সার্কিটের এক কাপ চা দরকার।",
+        "provider": "espeak",
+        "bytes": 32018,
+        "placeholder": true
+      }
+    },
+    "quip_1": {
+      "en": {
+        "file": "en/quip_1.mp3",
+        "text": "I have analysed all the evidence, and Mez is guilty of being fabulous.",
+        "provider": "espeak",
+        "bytes": 34944,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/quip_1.mp3",
+        "text": "সব প্রমাণ বিশ্লেষণ করে দেখলাম, মেজ অসাধারণ হওয়ার অপরাধে দোষী।",
+        "provider": "espeak",
+        "bytes": 48110,
+        "placeholder": true
+      }
+    },
+    "quip_2": {
+      "en": {
+        "file": "en/quip_2.mp3",
+        "text": "Some of these answers were so wrong, even my algorithm is embarrassed.",
+        "provider": "espeak",
+        "bytes": 31600,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/quip_2.mp3",
+        "text": "কিছু উত্তর এতটাই ভুল যে আমার অ্যালগরিদমও লজ্জা পাচ্ছে।",
+        "provider": "espeak",
+        "bytes": 39542,
+        "placeholder": true
+      }
+    },
+    "quip_3": {
+      "en": {
+        "file": "en/quip_3.mp3",
+        "text": "Fun fact: I'm an AI, and even I remember Mez's birthday better than some of you.",
+        "provider": "espeak",
+        "bytes": 40796,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/quip_3.mp3",
+        "text": "মজার তথ্য: আমি একটা এআই, তবুও আপনাদের কারও কারও চেয়ে মেজের জন্মদিন আমার ভালো মনে থাকে।",
+        "provider": "espeak",
+        "bytes": 65037,
+        "placeholder": true
+      }
+    },
+    "quip_4": {
+      "en": {
+        "file": "en/quip_4.mp3",
+        "text": "If friendship were scored like this quiz, a few of you would need a recount.",
+        "provider": "espeak",
+        "bytes": 35571,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/quip_4.mp3",
+        "text": "বন্ধুত্বের নম্বর যদি এই কুইজের মতো হতো, তাহলে কয়েকজনের আবার গণনা লাগত।",
+        "provider": "espeak",
+        "bytes": 55842,
+        "placeholder": true
+      }
+    },
+    "quip_5": {
+      "en": {
+        "file": "en/quip_5.mp3",
+        "text": "Don't worry, the leaderboard is temporary. The embarrassment is forever.",
+        "provider": "espeak",
+        "bytes": 35362,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/quip_5.mp3",
+        "text": "চিন্তা নেই, স্কোরবোর্ড ক্ষণস্থায়ী। কিন্তু লজ্জাটা চিরস্থায়ী।",
+        "provider": "espeak",
+        "bytes": 43303,
+        "placeholder": true
+      }
+    },
+    "quip_6": {
+      "en": {
+        "file": "en/quip_6.mp3",
+        "text": "Mez, another year older, and still the main character.",
+        "provider": "espeak",
+        "bytes": 29093,
+        "placeholder": true
+      },
+      "bn": {
+        "file": "bn/quip_6.mp3",
+        "text": "মেজ, আরও এক বছর বড় হলে, তবুও গল্পের নায়ক তুমিই।",
+        "provider": "espeak",
+        "bytes": 41005,
+        "placeholder": true
+      }
+    }
+  }
+}

@@ -1,10 +1,11 @@
 "use client";
 
 import QRCode from "qrcode";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Volume2, VolumeX } from "lucide-react";
 import { cx, HostLine, Leaderboard, Logo, StatusDot, TILE } from "@/components/ui";
-import { getCasper } from "@/lib/casper";
 import { useNow } from "@/lib/client/hooks";
+import { useHostAudio } from "@/lib/host/client/use-host-audio";
 import { useRoom } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
 import type { RoomView } from "@/lib/game/types";
@@ -24,16 +25,7 @@ export function DisplayScreen() {
   const { view, status, clockOffset } = useRoom("display");
   const joinUrl = joinUrlFor(view);
 
-  // Hand each new host line to Casper. The mock adapter is silent, so the
-  // captions below are the whole experience until the real adapter exists.
-  const line = view?.hostLine;
-  const lang = view?.hostLang;
-  useEffect(() => {
-    if (!line || !lang) return;
-    const casper = getCasper();
-    void casper.say({ text: line, lang });
-    return () => casper.stop();
-  }, [line, lang]);
+  const audio = useHostAudio(view);
 
   return (
     <main className="stage flex h-dvh flex-col overflow-hidden">
@@ -47,6 +39,11 @@ export function DisplayScreen() {
             </span>
           )}
           <span className="font-mono text-sm text-haze">{view?.players.length ?? 0} players</span>
+          {audio.unlocked && (
+            <span className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-widest text-haze" title="Sound is on">
+              <Volume2 className="size-4 text-go" aria-hidden /> Sound
+            </span>
+          )}
           <StatusDot status={status} />
         </div>
       </header>
@@ -57,7 +54,11 @@ export function DisplayScreen() {
         ) : view.phase === "lobby" ? (
           <Lobby view={view} joinUrl={joinUrl} />
         ) : view.phase === "question" || view.phase === "reveal" ? (
-          <QuestionBoard view={view} clockOffset={clockOffset} />
+          <QuestionBoard view={view} clockOffset={clockOffset} onCountdown={(left) => {
+            if (!view.host.voice) return;
+            if (left === 5) audio.clipIfIdle("time_warning", view.host.utterance.lang === "bn" ? "bn" : "en");
+            if (left <= 3 && left > 0) audio.sfx("tick");
+          }} />
         ) : view.phase === "leaderboard" ? (
           <Board title="Standings" view={view} />
         ) : view.phase === "messages" ? (
@@ -71,8 +72,17 @@ export function DisplayScreen() {
 
       {view && (
         <footer className="border-t border-white/10 bg-ink-950/70 px-6 py-4 lg:px-10">
-          <HostLine line={view.hostLine} lang={view.hostLang} big />
+          <HostLine host={view.host} speaking={!!audio.speaking} big />
         </footer>
+      )}
+
+      {view && !audio.unlocked && (
+        <button
+          onClick={() => void audio.unlock()}
+          className="fixed bottom-28 right-6 z-50 inline-flex animate-pop items-center gap-3 rounded-2xl bg-gold px-6 py-4 font-display text-xl font-extrabold text-ink-950 shadow-[0_8px_0_0_var(--color-gold-deep)] active:translate-y-1"
+        >
+          <VolumeX className="size-6" aria-hidden /> Click to turn on the host&apos;s voice
+        </button>
       )}
     </main>
   );
@@ -130,13 +140,21 @@ function Lobby({ view, joinUrl }: { view: RoomView; joinUrl: string | null }) {
   );
 }
 
-function QuestionBoard({ view, clockOffset }: { view: RoomView; clockOffset: number }) {
+function QuestionBoard({ view, clockOffset, onCountdown }: { view: RoomView; clockOffset: number; onCountdown?: (left: number) => void }) {
   const q = view.question!;
   const now = useNow(200);
   const revealed = view.phase === "reveal";
   const leftMs = q.endsAt && now ? Math.max(0, q.endsAt - (now + clockOffset)) : null;
   const left = leftMs === null ? null : Math.ceil(leftMs / 1000);
   const total = q.tally?.reduce((a, b) => a + b, 0) ?? 0;
+  const announced = useRef<string | null>(null);
+  useEffect(() => {
+    if (revealed || left === null) return;
+    const mark = `${q.id}:${left}`;
+    if (announced.current === mark) return;
+    announced.current = mark;
+    onCountdown?.(left);
+  }, [left, q.id, revealed, onCountdown]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">

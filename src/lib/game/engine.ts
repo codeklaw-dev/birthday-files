@@ -1,4 +1,6 @@
-import { SCRIPT } from "@/lib/casper/script";
+import { availableLang, customLine, hostView, initialHost, speak } from "@/lib/host/host-state";
+import { CLIP_KEYS, LINES, type ClipKey } from "@/lib/host/script";
+import { SFX_KINDS, type HostState, type Line } from "@/lib/host/types";
 import { MOCK_QUESTIONS } from "./mock-data";
 import type {
   Action,
@@ -32,7 +34,7 @@ export interface EngineCtx {
   newId: () => string;
 }
 
-export function createRoom(code = "MEZ26"): RoomState {
+export function createRoom(code = "MEZ26", now = 0): RoomState {
   return {
     code,
     phase: "lobby",
@@ -47,8 +49,7 @@ export function createRoom(code = "MEZ26"): RoomState {
     messages: [],
     scoreLog: [],
     cake: { candles: LIMITS.candles, blows: 0, perCandle: 3 },
-    hostLine: SCRIPT.lobby,
-    hostLang: "both",
+    host: initialHost("u0", now),
     rev: 0,
   };
 }
@@ -67,7 +68,11 @@ const clean = (s: unknown, max: number) =>
 const fail = (error: string): ActionResult => ({ ok: false, error });
 const ok = (state: RoomState): ActionResult => ({ ok: true, state: { ...state, rev: state.rev + 1 } });
 
-function startQuestion(state: RoomState, index: number, now: number): ActionResult {
+const say = (state: RoomState, line: Line, ctx: EngineCtx): HostState => speak(state.host, line, ctx);
+const MAX_LINE = 400;
+
+function startQuestion(state: RoomState, index: number, ctx: EngineCtx): ActionResult {
+  const { now } = ctx;
   const q = state.questions[index];
   if (!q) return fail("No more questions.");
   return ok({
@@ -78,21 +83,24 @@ function startQuestion(state: RoomState, index: number, now: number): ActionResu
     questionEndsAt: now + q.seconds * 1000,
     answers: {},
     lastGains: {},
-    hostLine: SCRIPT.question(index + 1, state.questions.length),
+    host: say(state, LINES.question(index + 1, state.questions.length), ctx),
   });
 }
 
 /** Score the current question. Correct = base + a bonus for speed. */
-function reveal(state: RoomState, now: number): ActionResult {
+function reveal(state: RoomState, ctx: EngineCtx): ActionResult {
+  const { now } = ctx;
   const q = state.questions[state.questionIndex];
   if (state.phase !== "question" || !q) return fail("No question is open.");
   const started = state.questionStartedAt ?? now;
   const window = q.seconds * 1000;
   const gains: Record<string, number> = {};
   let correct = 0;
+  let fastest: { id: string; at: number } | null = null;
   for (const [playerId, a] of Object.entries(state.answers)) {
     if (a.optionIndex !== q.correctIndex) continue;
     correct++;
+    if (!fastest || a.at < fastest.at) fastest = { id: playerId, at: a.at };
     const left = Math.min(1, Math.max(0, 1 - (a.at - started) / window));
     gains[playerId] = LIMITS.basePoints + Math.round(LIMITS.speedBonus * left);
   }
@@ -106,7 +114,11 @@ function reveal(state: RoomState, now: number): ActionResult {
       ...state.scoreLog,
       ...Object.entries(gains).map(([playerId, delta]) => ({ playerId, delta, reason: `quiz:${q.id}`, at: now })),
     ],
-    hostLine: SCRIPT.reveal(correct, Object.keys(state.answers).length),
+    host: say(
+      state,
+      LINES.reveal(correct, Object.keys(state.answers).length, state.players.find((p) => p.id === fastest?.id)?.name ?? null),
+      ctx,
+    ),
   });
 }
 
@@ -156,7 +168,7 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       if (state.phase !== "cake") return fail("The cake isn't out yet.");
       if (candlesLit(state.cake) === 0) return fail("The candles are already out.");
       const cake = { ...state.cake, blows: state.cake.blows + 1 };
-      return ok({ ...state, cake, hostLine: candlesLit(cake) === 0 ? SCRIPT.cakeDone : state.hostLine });
+      return ok({ ...state, cake, host: candlesLit(cake) === 0 ? say(state, LINES.cakeDone(), ctx) : state.host });
     }
 
     case "submitMessage": {
@@ -171,19 +183,19 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
 
     case "host/start":
       if (state.phase !== "lobby") return fail("The game has already started.");
-      return startQuestion(state, 0, now);
+      return startQuestion(state, 0, ctx);
 
     case "host/next":
       if (state.phase === "question") return fail("Reveal the current question first.");
-      return startQuestion(state, state.questionIndex + 1, now);
+      return startQuestion(state, state.questionIndex + 1, ctx);
 
     case "host/reveal":
-      return reveal(state, now);
+      return reveal(state, ctx);
 
     case "system/timeUp": {
       const q = state.questions[state.questionIndex];
       if (state.phase !== "question" || q?.id !== action.questionId) return fail("Stale timer.");
-      return reveal(state, now);
+      return reveal(state, ctx);
     }
 
     case "host/showLeaderboard":
@@ -191,12 +203,12 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       return ok({
         ...state,
         phase: "leaderboard",
-        hostLine: SCRIPT.leaderboard(rankPlayers(state.players)[0]?.name ?? null),
+        host: say(state, LINES.leaderboard(rankPlayers(state.players)[0]?.name ?? null), ctx),
       });
 
     case "host/showMessages":
       if (state.phase === "question") return fail("Reveal the current question first.");
-      return ok({ ...state, phase: "messages", hostLine: SCRIPT.messages });
+      return ok({ ...state, phase: "messages", host: say(state, LINES.messages(), ctx) });
 
     case "host/startCake":
       if (state.phase === "question") return fail("Reveal the current question first.");
@@ -204,7 +216,7 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
         ...state,
         phase: "cake",
         cake: { candles: LIMITS.candles, blows: 0, perCandle: Math.max(3, state.players.length * 2) },
-        hostLine: SCRIPT.cake,
+        host: say(state, LINES.cake(), ctx),
       });
 
     case "host/finish":
@@ -212,19 +224,23 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
         ...state,
         phase: "finished",
         questionEndsAt: null,
-        hostLine: SCRIPT.finished(rankPlayers(state.players)[0]?.name ?? null),
+        host: say(state, LINES.finished(rankPlayers(state.players)[0]?.name ?? null), ctx),
       });
 
     case "host/reset": {
       // Keep guests and their messages; clear scores and progress.
-      const fresh = createRoom(state.code);
+      const fresh = createRoom(state.code, now);
       return ok({
         ...fresh,
         rev: state.rev,
         tokens: state.tokens,
         players: state.players.map((p) => ({ ...p, score: 0 })),
         messages: state.messages,
-        hostLang: state.hostLang,
+        host: say(
+          { ...state, host: { ...fresh.host, mode: state.host.mode, voice: state.host.voice, autoQuips: state.host.autoQuips, count: state.host.count, recent: state.host.recent } },
+          LINES.lobby(),
+          ctx,
+        ),
       });
     }
 
@@ -266,8 +282,42 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
     }
 
     case "host/setLang":
-      if (!["en", "bn", "both"].includes(action.lang)) return fail("Invalid language.");
-      return ok({ ...state, hostLang: action.lang });
+      if (!["en", "bn", "both", "auto"].includes(action.lang)) return fail("Invalid language.");
+      return ok({ ...state, host: { ...state.host, mode: action.lang } });
+
+    case "host/setVoice":
+      return ok({ ...state, host: { ...state.host, voice: !!action.enabled } });
+
+    case "host/setAutoQuips":
+      return ok({ ...state, host: { ...state.host, autoQuips: !!action.enabled } });
+
+    case "host/say": {
+      const text = { en: clean(action.text?.en, MAX_LINE), bn: clean(action.text?.bn, MAX_LINE) };
+      const lang = availableLang(text, action.lang ?? (state.host.mode === "auto" ? "both" : state.host.mode));
+      if (!lang) return fail("Write something for the host to say.");
+      const source = action.source === "llm" || action.source === "conversation" ? action.source : "host";
+      return ok({ ...state, host: speak(state.host, customLine(text, source), ctx, { source, lang }) });
+    }
+
+    case "host/clip":
+      if (!CLIP_KEYS.includes(action.clip as ClipKey)) return fail("Unknown clip.");
+      return ok({ ...state, host: say(state, LINES.clip(action.clip as ClipKey), ctx) });
+
+    case "host/quip":
+      return ok({ ...state, host: say(state, LINES.quip(state.host.count), ctx) });
+
+    case "host/replay": {
+      const u = state.host.utterance;
+      const line: Line = { cue: u.cue, text: u.text, clip: u.clip, fallbackClip: u.fallbackClip };
+      return ok({ ...state, host: speak(state.host, line, ctx, { source: u.source, lang: u.lang }) });
+    }
+
+    case "host/stopSpeech":
+      return ok({ ...state, host: { ...state.host, stopId: ctx.newId() } });
+
+    case "host/sfx":
+      if (!SFX_KINDS.includes(action.kind)) return fail("Unknown sound.");
+      return ok({ ...state, host: { ...state.host, sfx: { id: ctx.newId(), kind: action.kind, at: now } } });
 
     default:
       return fail("Unknown action.");
@@ -309,7 +359,6 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
     lastGains: state.phase === "reveal" || role === "host" ? state.lastGains : {},
     messages: role === "host" ? state.messages : state.messages.filter((m) => m.status === "approved"),
     cake: { candles: state.cake.candles, lit: candlesLit(state.cake) },
-    hostLine: state.hostLine,
-    hostLang: state.hostLang,
+    host: hostView(state.host),
   };
 }

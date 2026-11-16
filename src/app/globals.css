@@ -49,6 +49,10 @@
 @keyframes bulbs {
   50% { opacity: 0.35; }
 }
+@keyframes bars {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
 @keyframes drift {
   from { transform: translateY(0) rotate(0deg); opacity: 0; }
   10% { opacity: 1; }

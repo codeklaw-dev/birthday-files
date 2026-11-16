@@ -1,27 +1,49 @@
 import "server-only";
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { networkInterfaces } from "node:os";
+import path from "node:path";
 import { applyAction, createRoom } from "@/lib/game/engine";
 import type { Action, ActionResult, RoomState } from "@/lib/game/types";
 
 /**
  * MOCK realtime backend: one room held in server memory, fanned out to
- * clients over Server-Sent Events.
+ * clients over Server-Sent Events, snapshotted to `.data/room.json` so a
+ * server restart mid-party does not lose players, scores or messages.
  *
- * Works with `next dev` / `next start` (a single Node process) so phones on
- * the same Wi-Fi can really play. It will NOT work on Vercel serverless —
- * that is what the Supabase adapter replaces (docs/ARCHITECTURE.md).
+ * Works with `next dev` / `next start` (a single Node process). It will NOT
+ * work on Vercel serverless; Supabase replaces it (docs/ARCHITECTURE.md).
  */
+const SNAPSHOT_VERSION = 2;
+const DATA_DIR = process.env.ROOM_DATA_DIR || path.join(process.cwd(), ".data");
+const SNAPSHOT = path.join(DATA_DIR, "room.json");
+
+function loadSnapshot(): RoomState | null {
+  if (process.env.ROOM_PERSIST === "off") return null;
+  try {
+    const raw = JSON.parse(readFileSync(SNAPSHOT, "utf8"));
+    if (raw?.version !== SNAPSHOT_VERSION || typeof raw.state?.code !== "string") return null;
+    return raw.state as RoomState;
+  } catch {
+    return null;
+  }
+}
+
 class RoomStore {
-  private state: RoomState = createRoom();
-  private listeners = new Set<(s: RoomState) => void>();
+  private state: RoomState = loadSnapshot() ?? createRoom("MEZ26", Date.now());
+  private listeners = new Set<(s: RoomState, action: Action | null) => void>();
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.syncTimer();
+  }
 
   getState(): RoomState {
     return this.state;
   }
 
-  subscribe(fn: (s: RoomState) => void): () => void {
+  subscribe(fn: (s: RoomState, action: Action | null) => void): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   }
@@ -31,7 +53,8 @@ class RoomStore {
     if (!result.ok) return result;
     this.state = result.state;
     this.syncTimer();
-    for (const fn of this.listeners) fn(this.state);
+    this.scheduleSave();
+    for (const fn of this.listeners) fn(this.state, action);
     return result;
   }
 
@@ -46,6 +69,21 @@ class RoomStore {
       () => this.dispatch({ type: "system/timeUp", questionId }),
       Math.max(0, questionEndsAt - Date.now()) + 250,
     );
+  }
+
+  private scheduleSave() {
+    if (process.env.ROOM_PERSIST === "off" || this.saveTimer) return;
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      try {
+        mkdirSync(DATA_DIR, { recursive: true });
+        const tmp = `${SNAPSHOT}.tmp`;
+        writeFileSync(tmp, JSON.stringify({ version: SNAPSHOT_VERSION, savedAt: Date.now(), state: this.state }));
+        renameSync(tmp, SNAPSHOT);
+      } catch (err) {
+        console.error("[room] snapshot failed", err);
+      }
+    }, 500);
   }
 }
 
