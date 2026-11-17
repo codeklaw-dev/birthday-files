@@ -1,4 +1,5 @@
 import type { Player } from "@/lib/game/types";
+import { LINES, type ClipKey } from "@/lib/host/script";
 import type { Line } from "@/lib/host/types";
 import type { PointsConfig } from "./config";
 import type { Award, ContributorRef, GameState, Step, Subject } from "./types";
@@ -57,7 +58,12 @@ export const letter = (i: number): string => (i < 26 ? String.fromCharCode(65 + 
 
 export const clean = (s: unknown, max: number) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
 
-export const line = (cue: string, en: string, bn: string, bigMoment = false): Line => ({ cue, text: { en, bn }, bigMoment });
+export const line = (cue: string, en: string, bn: string, bigMoment = false, fallbackClip?: string): Line => ({ cue, text: { en, bn }, bigMoment, fallbackClip });
+
+/** A pre-recorded narration line (plays instantly, works with the cloud down). */
+export const clip = (key: ClipKey, bigMoment = true): Line => ({ ...LINES.clip(key), cue: key, bigMoment });
+/** Dynamic reveal lines fall back to the recorded drumroll line. */
+export const reveal = (cue: string, en: string, bn: string): Line => line(cue, en, bn, true, "game_reveal");
 
 export const playerSubject = (p: Player): Subject => ({ kind: "player", id: p.id, name: p.name });
 export const contributorSubject = (c: ContributorRef): Subject => ({ kind: "contributor", id: c.id, name: c.name, remote: c.remote });

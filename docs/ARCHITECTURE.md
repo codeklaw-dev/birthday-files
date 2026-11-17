@@ -82,7 +82,7 @@ The earlier Casper integration requirement has been removed. The host is now pro
          /api/host/listen      (push-to-talk)               STT chain: groq → gemini → cloudflare → mock
 ```
 
-- **Lines.** `src/lib/host/script.ts` holds the script. *Static* lines (welcome, cake, quips…) have a `clip` key and are pre-recorded. *Dynamic* lines (names, numbers) are spoken live and carry a `fallbackClip` with the same meaning.
+- **Lines.** `src/lib/host/script.ts` holds the script (33 lines, including an intro for each game, a reveal drumroll, surprise and memory intros, and push-to-talk "thinking" and fallback lines). *Static* lines (welcome, cake, quips…) have a `clip` key and are pre-recorded. *Dynamic* lines (names, numbers) are spoken live and carry a `fallbackClip` with the same meaning.
 - **Pre-warming.** When the engine emits a line, `service.ts` starts synthesising it on the server straight away, so the TV usually finds it already cached.
 - **Interruptions.** Scripted and host-typed lines cut off whatever is still playing (the game has moved on). Quips, AI lines and conversation replies queue behind it.
 - **Languages.** `en`, `bn`, `both`, or `auto`: auto alternates line by line and uses both for big moments. Conversation replies use the language the guest spoke.
@@ -92,7 +92,15 @@ The earlier Casper integration requirement has been removed. The host is now pro
 - **Telemetry.** The TV reports how each line was played (clip, live, fallback, browser, captions), with provider and time to first sound. The dashboard's *Voice system* panel shows this alongside provider health.
 - **Browser rules.** The TV needs one click to enable sound (autoplay policy). In kiosk mode, launching Chrome with `--autoplay-policy=no-user-gesture-required` skips it. The microphone needs a secure page, so push-to-talk works at `http://localhost` on the laptop or over HTTPS, not from a phone on `http://192.168…`.
 
-Provider research, costs and set-up steps: [AI_PROVIDERS.md](AI_PROVIDERS.md).
+Provider research, costs and set-up steps: [AI_PROVIDERS.md](AI_PROVIDERS.md). Modes, guardrails, latency and demo: [AI_HOST.md](AI_HOST.md).
+
+**Since Phase 4:**
+- The host's personality, approved guest facts, announcements and narration approvals live in a separate store (`host/server/knowledge.ts`).
+- The model's view of the room comes from the public TV view (`host/server/context.ts`).
+- AI output can only reach the show through `host/server/ai-actions.ts` (speak-only).
+- The TV plays only organiser-approved clips (`/api/host/narration`).
+- Push-to-talk is two steps (`/api/host/transcribe` → `/api/host/reply`) so the transcript can be corrected.
+- Surprises are a scene (`phase: "surprise"`) built server-side from approved content.
 
 ## Invite portal (guest RSVPs and submissions)
 

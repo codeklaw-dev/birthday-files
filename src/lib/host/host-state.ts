@@ -16,7 +16,7 @@ export function initialHost(id: string, now: number): HostState {
   const line = LINES.lobby();
   const utterance: Utterance = { id, cue: line.cue, text: line.text, lang: "both", clip: line.clip, source: "script", at: now };
   // Auto: one language per line (both for big moments), which halves the free voice quota used.
-  return { utterance, recent: [utterance], mode: "auto", voice: true, autoQuips: false, sfx: null, stopId: null, count: 1 };
+  return { utterance, recent: [utterance], mode: "auto", voice: true, autoQuips: false, sfx: null, stopId: null, count: 1, volume: 0.9, muted: false, subtitles: true };
 }
 
 export function speak(
@@ -53,6 +53,9 @@ export function hostView(host: HostState): HostView {
     autoQuips: host.autoQuips,
     sfx: host.sfx,
     stopId: host.stopId,
+    volume: host.volume ?? 0.9,
+    muted: host.muted ?? false,
+    subtitles: host.subtitles ?? true,
   };
 }
 

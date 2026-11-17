@@ -6,7 +6,9 @@ import { CLIP_KEYS, CLIPS } from "@/lib/host/script";
 import { EMPTY_MANIFEST, type NarrationManifest } from "@/lib/host/narration";
 import type { Utterance } from "@/lib/host/types";
 import { roomStore } from "@/lib/server/room-store";
+import { aiDispatch } from "./ai-actions";
 import { writeCommentary } from "./commentary";
+import { knowledge } from "./knowledge";
 import { speech } from "./speech-cache";
 
 /**
@@ -25,6 +27,20 @@ export function readManifest(): NarrationManifest {
   }
 }
 
+/** Only clips the organiser approved, for exactly the text and file they reviewed. */
+export function approvedManifest(manifest = readManifest()): NarrationManifest {
+  const approvals = knowledge().narrationApprovals();
+  const clips: NarrationManifest["clips"] = {};
+  for (const [key, langs] of Object.entries(manifest.clips)) {
+    for (const lang of ["en", "bn"] as const) {
+      const c = langs[lang];
+      const a = approvals[`${key}:${lang}`];
+      if (c && a?.status === "approved" && a.text === c.text && a.bytes === c.bytes) clips[key] = { ...clips[key], [lang]: c };
+    }
+  }
+  return { ...manifest, clips };
+}
+
 export function hasClip(manifest: NarrationManifest, key: string | undefined, lang: Lang, text?: string): boolean {
   const c = key ? manifest.clips[key]?.[lang] : undefined;
   return !!c && (text === undefined || c.text === text);
@@ -35,7 +51,8 @@ export function spokenLangs(u: Utterance): Lang[] {
 }
 
 export function narrationCoverage(manifest = readManifest()) {
-  const out = { total: CLIP_KEYS.length, en: 0, bn: 0, placeholders: 0, stale: 0 };
+  const approved = approvedManifest(manifest);
+  const out = { total: CLIP_KEYS.length, en: 0, bn: 0, placeholders: 0, stale: 0, approved: Object.values(approved.clips).reduce((n, l) => n + Object.keys(l).length, 0) };
   for (const key of CLIP_KEYS) {
     for (const lang of ["en", "bn"] as const) {
       const c = manifest.clips[key]?.[lang];
@@ -49,7 +66,7 @@ export function narrationCoverage(manifest = readManifest()) {
 }
 
 function prewarm(u: Utterance) {
-  const manifest = readManifest();
+  const manifest = approvedManifest();
   for (const lang of spokenLangs(u)) {
     if (hasClip(manifest, u.clip, lang, u.text[lang])) continue;
     speech(u.text[lang], lang).catch(() => {
@@ -67,10 +84,10 @@ async function autoQuip(state: RoomState, cue: string) {
   try {
     const w = await writeCommentary(state, cue === "reveal" ? "reveal" : "leaderboard");
     if (seq !== quipSeq || Date.now() > deadline) return;
-    if (w.clip) roomStore.dispatch({ type: "host/clip", clip: w.clip });
-    else roomStore.dispatch({ type: "host/say", text: w.text, source: "llm" });
+    if (w.clip) aiDispatch({ type: "host/clip", clip: w.clip });
+    else aiDispatch({ type: "host/say", text: w.text, source: "llm" });
   } catch {
-    if (seq === quipSeq) roomStore.dispatch({ type: "host/quip" });
+    if (seq === quipSeq) aiDispatch({ type: "host/quip" });
   }
 }
 

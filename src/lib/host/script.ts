@@ -82,6 +82,46 @@ export const CLIPS = {
     en: "One moment. My circuits need a cup of tea.",
     bn: "এক মিনিট। আমার সার্কিটের এক কাপ চা দরকার।",
   },
+  game_imposter_intro: {
+    en: "Mez Imposter! Check your phone, secretly. Everyone has the same word, except the imposter. Act natural. Badly.",
+    bn: "মেজ ইম্পোস্টার! গোপনে ফোন দেখুন। সবার একই শব্দ, শুধু ইম্পোস্টার ছাড়া। স্বাভাবিক থাকুন। যতটা পারেন।",
+  },
+  game_wkmb_intro: {
+    en: "Who Knows Mez Best! Your answers are on screen, names hidden. Mez, judge them. Mercilessly.",
+    bn: "কে মেজকে সবচেয়ে ভালো চেনে! আপনাদের উত্তর স্ক্রিনে, নাম লুকানো। মেজ, বিচার করো। দয়ামায়া ছাড়া।",
+  },
+  game_survey_intro: {
+    en: "Mez Survey! We asked the guests. Now guess what they said. No pressure. Some pressure.",
+    bn: "মেজ সার্ভে! আমরা অতিথিদের জিজ্ঞেস করেছি। এবার অনুমান করুন তারা কী বলেছেন। চাপ নেই। একটু আছে।",
+  },
+  game_trial_intro: {
+    en: "All rise! Mez on Trial is now in session. The charges are serious. Well, seriously silly.",
+    bn: "সবাই দাঁড়ান! মেজের বিচার শুরু। অভিযোগগুলো গুরুতর। মানে, গুরুতর রকমের হাস্যকর।",
+  },
+  game_mystery_intro: {
+    en: "Mystery Files. Exhibits from people who know Mez far too well. Who sent what?",
+    bn: "মিস্ট্রি ফাইলস। এমন মানুষদের পাঠানো প্রমাণ, যারা মেজকে একটু বেশিই চেনেন। কে কী পাঠিয়েছে?",
+  },
+  game_reveal: {
+    en: "Drumroll, please. The moment of truth.",
+    bn: "ড্রামরোল, প্লিজ। সত্যের মুহূর্ত।",
+  },
+  surprise_intro: {
+    en: "Hold everything! We have a special delivery for Mez.",
+    bn: "সব থামান! মেজের জন্য একটা বিশেষ বার্তা এসেছে।",
+  },
+  memory_intro: {
+    en: "Someone sent a memory for Mez. Get the tissues ready. Or the popcorn.",
+    bn: "কেউ মেজের জন্য একটা স্মৃতি পাঠিয়েছেন। টিস্যু তৈরি রাখুন। অথবা পপকর্ন।",
+  },
+  ptt_thinking: {
+    en: "Hmm. Let me consult my circuits.",
+    bn: "হুম। আমার সার্কিটের সাথে একটু পরামর্শ করে নিই।",
+  },
+  ptt_fallback: {
+    en: "My circuits just fainted. Let's pretend I said something brilliant.",
+    bn: "আমার সার্কিট অজ্ঞান হয়ে গেল। ধরে নিন আমি দারুণ কিছু বলেছি।",
+  },
   quip_1: {
     en: "I have analysed all the evidence, and Mez is guilty of being fabulous.",
     bn: "সব প্রমাণ বিশ্লেষণ করে দেখলাম, মেজ অসাধারণ হওয়ার অপরাধে দোষী।",

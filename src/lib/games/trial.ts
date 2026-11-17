@@ -1,5 +1,5 @@
 import { timerMs } from "./config";
-import { contributorSubject, err, line, ok, playerSubject, type Env, type GameModule, type GCtx } from "./common";
+import { clip, reveal, contributorSubject, err, line, ok, playerSubject, type Env, type GameModule, type GCtx } from "./common";
 import type { Award, Step, TrialContent, TrialGame } from "./types";
 
 /**
@@ -13,7 +13,7 @@ export function startTrial(content: TrialContent, ctx: GCtx): Step<TrialGame> {
   return ok(
     { id: "trial", roundId: ctx.newId(), step: "charge", stepEndsAt: null, startedAt: ctx.now, index: 0, cases: content.cases, plea: null, votes: {}, verdict: null },
     {
-      line: line("trial", `All rise! Mez on Trial is now in session. First charge: Mez stands accused of ${content.cases[0].charge}`, `সবাই দাঁড়ান! মেজের বিচার শুরু। প্রথম অভিযোগ: মেজের বিরুদ্ধে অভিযোগ, ${content.cases[0].charge}`, true),
+      line: clip("game_trial_intro"),
       audit: `Mez on Trial started with ${content.cases.length} charge${content.cases.length > 1 ? "s" : ""}`,
     },
   );
@@ -39,7 +39,7 @@ function verdict(g: TrialGame, env: Env): Step<TrialGame> {
     hung: [`A hung jury! The accuser was ${c.accuser.name}.`, `জুরিরা একমত হতে পারেননি! অভিযোগকারী ছিলেন ${c.accuser.name}।`],
   }[outcome];
   const next: TrialGame = { ...g, step: "verdict", stepEndsAt: null, verdict: { guilty, notGuilty, outcome } };
-  return ok(next, { awards: awards.filter((a) => a.delta !== 0), line: line("trialVerdict", said[0], said[1], true) });
+  return ok(next, { awards: awards.filter((a) => a.delta !== 0), line: reveal("trialVerdict", said[0], said[1]) });
 }
 
 export const trial: GameModule<TrialGame, TrialView> = {

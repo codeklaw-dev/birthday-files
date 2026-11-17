@@ -379,3 +379,41 @@ export function BoardsScene({ view }: { view: RoomView }) {
 }
 
 export { TILE };
+
+export function SurpriseScene({ view }: { view: RoomView }) {
+  const s = view.surprise!;
+  const lang = view.host.utterance.lang;
+  const body = s.kind === "memory" ? s.text.en : lang === "bn" ? s.text.bn || s.text.en : s.text.en || s.text.bn;
+  const second = s.kind === "announcement" && lang === "both" && s.text.en && s.text.bn ? s.text.bn : null;
+  return (
+    <Scene sceneKey={`surprise:${s.id}:${s.at}`} variant="curtain" className="items-center justify-center gap-8">
+      <Confetti />
+      <p className="font-mono text-xl uppercase tracking-[0.4em] text-stamp">{s.kind === "memory" ? "A memory for Mez" : "Special announcement"}</p>
+      <div className="grid w-full max-w-6xl items-center gap-10 lg:grid-flow-col">
+        {s.mediaUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- private, signed link
+          <img src={s.mediaUrl} alt={s.from ? `Photo from ${s.from}` : "Surprise photo"} className="max-h-[52vh] rounded-2xl object-contain shadow-2xl" />
+        )}
+        <div className="file-card animate-pop p-10 text-center">
+          {s.kind === "announcement" && <h1 className="font-display text-5xl font-extrabold text-ink-900">{s.title}</h1>}
+          <p className={cx("font-medium leading-relaxed text-ink-900", s.kind === "announcement" ? "mt-4 text-3xl" : "text-4xl")}>{s.kind === "memory" ? `“${body}”` : body}</p>
+          {second && <p className="mt-3 font-bangla text-2xl text-ink-700">{second}</p>}
+          {s.from && <p className="mt-6 font-mono text-lg uppercase tracking-[0.25em] text-ink-600">— {s.from}</p>}
+        </div>
+      </div>
+    </Scene>
+  );
+}
+
+const CONFETTI = ["🎉", "🎈", "✨", "🎂", "⭐", "🎊"];
+function Confetti() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      {Array.from({ length: 20 }, (_, i) => (
+        <span key={i} className="absolute -top-12 animate-drift text-4xl" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.43) % 9}s`, animationDuration: `${7 + (i % 5)}s` }}>
+          {CONFETTI[i % CONFETTI.length]}
+        </span>
+      ))}
+    </div>
+  );
+}

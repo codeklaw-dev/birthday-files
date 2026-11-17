@@ -3,7 +3,7 @@ import { azureTts } from "./providers/azure";
 import { cloudflareLlm, cloudflareStt } from "./providers/cloudflare";
 import { geminiLlm, geminiStt, geminiTts } from "./providers/gemini";
 import { env } from "./providers/http";
-import { englishOnlyTts, failingTts, mockLlm, mockStt, mockTts, slowTts } from "./providers/mock";
+import { englishOnlyTts, failingLlm, failingStt, failingTts, mockLlm, mockStt, mockTts, slowTts } from "./providers/mock";
 import { groqLlm, groqStt } from "./providers/openai-compatible";
 import type { LlmProvider, ProviderKind, SttProvider, TtsProvider } from "./types";
 
@@ -18,8 +18,8 @@ import type { LlmProvider, ProviderKind, SttProvider, TtsProvider } from "./type
 
 const REGISTRY = {
   tts: { gemini: geminiTts, azure: azureTts, mock: mockTts, "mock-fail": failingTts, "mock-slow": slowTts, "mock-en": englishOnlyTts },
-  llm: { gemini: geminiLlm, groq: groqLlm, cloudflare: cloudflareLlm, mock: mockLlm },
-  stt: { groq: groqStt, gemini: geminiStt, cloudflare: cloudflareStt, mock: mockStt },
+  llm: { gemini: geminiLlm, groq: groqLlm, cloudflare: cloudflareLlm, mock: mockLlm, "mock-fail": failingLlm },
+  stt: { groq: groqStt, gemini: geminiStt, cloudflare: cloudflareStt, mock: mockStt, "mock-fail": failingStt },
 } as const;
 
 const DEFAULT_CHAIN: Record<ProviderKind, string> = {

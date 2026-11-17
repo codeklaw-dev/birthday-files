@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-16T14:49:41.790Z",
+  "generatedAt": "2026-11-17T21:41:13.000Z",
   "clips": {
     "lobby_welcome": {
       "en": {
@@ -188,41 +188,36 @@
       "en": {
         "file": "en/finale_generic.mp3",
         "text": "Case closed! Thank you, detectives. Happy birthday, Mez!",
-        "provider": "espeak",
-        "bytes": 39960,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-lite-tts",
+        "bytes": 42093
       },
       "bn": {
         "file": "bn/finale_generic.mp3",
         "text": "কেস সমাধান! ধন্যবাদ, গোয়েন্দারা। শুভ জন্মদিন, মেজ!",
-        "provider": "espeak",
-        "bytes": 46229,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 39597
       }
     },
     "happy_birthday": {
       "en": {
         "file": "en/happy_birthday.mp3",
         "text": "Happy birthday, Mez!",
-        "provider": "espeak",
-        "bytes": 15091,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 15789
       },
       "bn": {
         "file": "bn/happy_birthday.mp3",
         "text": "শুভ জন্মদিন, মেজ!",
-        "provider": "espeak",
-        "bytes": 18435,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 17133
       }
     },
     "applause": {
       "en": {
         "file": "en/applause.mp3",
         "text": "Give it up for our detectives!",
-        "provider": "espeak",
-        "bytes": 17181,
-        "placeholder": true
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 20589
       },
       "bn": {
         "file": "bn/applause.mp3",
@@ -236,16 +231,14 @@
       "en": {
         "file": "en/tech_trouble.mp3",
         "text": "One moment. My circuits need a cup of tea.",
-        "provider": "espeak",
-        "bytes": 25540,
-        "placeholder": true
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 34029
       },
       "bn": {
         "file": "bn/tech_trouble.mp3",
         "text": "এক মিনিট। আমার সার্কিটের এক কাপ চা দরকার।",
-        "provider": "espeak",
-        "bytes": 32018,
-        "placeholder": true
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 32109
       }
     },
     "quip_1": {
@@ -342,6 +335,146 @@
         "provider": "espeak",
         "bytes": 41005,
         "placeholder": true
+      }
+    },
+    "game_imposter_intro": {
+      "en": {
+        "file": "en/game_imposter_intro.mp3",
+        "text": "Mez Imposter! Check your phone, secretly. Everyone has the same word, except the imposter. Act natural. Badly.",
+        "provider": "gemini/gemini-3.8-flash-lite-tts",
+        "bytes": 87213
+      },
+      "bn": {
+        "file": "bn/game_imposter_intro.mp3",
+        "text": "মেজ ইম্পোস্টার! গোপনে ফোন দেখুন। সবার একই শব্দ, শুধু ইম্পোস্টার ছাড়া। স্বাভাবিক থাকুন। যতটা পারেন।",
+        "provider": "gemini/gemini-3.8-flash-lite-tts",
+        "bytes": 82029
+      }
+    },
+    "game_wkmb_intro": {
+      "en": {
+        "file": "en/game_wkmb_intro.mp3",
+        "text": "Who Knows Mez Best! Your answers are on screen, names hidden. Mez, judge them. Mercilessly.",
+        "provider": "gemini/gemini-3.8-flash-lite-tts",
+        "bytes": 62829
+      },
+      "bn": {
+        "file": "bn/game_wkmb_intro.mp3",
+        "text": "কে মেজকে সবচেয়ে ভালো চেনে! আপনাদের উত্তর স্ক্রিনে, নাম লুকানো। মেজ, বিচার করো। দয়ামায়া ছাড়া।",
+        "provider": "gemini/gemini-3.8-flash-lite-tts",
+        "bytes": 75309
+      }
+    },
+    "game_survey_intro": {
+      "en": {
+        "file": "en/game_survey_intro.mp3",
+        "text": "Mez Survey! We asked the guests. Now guess what they said. No pressure. Some pressure.",
+        "provider": "gemini/gemini-3.8-flash-lite-tts",
+        "bytes": 55917
+      },
+      "bn": {
+        "file": "bn/game_survey_intro.mp3",
+        "text": "মেজ সার্ভে! আমরা অতিথিদের জিজ্ঞেস করেছি। এবার অনুমান করুন তারা কী বলেছেন। চাপ নেই। একটু আছে।",
+        "provider": "gemini/gemini-3.8-flash-lite-tts",
+        "bytes": 72429
+      }
+    },
+    "game_trial_intro": {
+      "en": {
+        "file": "en/game_trial_intro.mp3",
+        "text": "All rise! Mez on Trial is now in session. The charges are serious. Well, seriously silly.",
+        "provider": "gemini/gemini-3.8-flash-lite-tts",
+        "bytes": 64749
+      },
+      "bn": {
+        "file": "bn/game_trial_intro.mp3",
+        "text": "সবাই দাঁড়ান! মেজের বিচার শুরু। অভিযোগগুলো গুরুতর। মানে, গুরুতর রকমের হাস্যকর।",
+        "provider": "gemini/gemini-3.8-flash-lite-tts",
+        "bytes": 63789
+      }
+    },
+    "game_mystery_intro": {
+      "en": {
+        "file": "en/game_mystery_intro.mp3",
+        "text": "Mystery Files. Exhibits from people who know Mez far too well. Who sent what?",
+        "provider": "gemini/gemini-3.8-flash-lite-tts",
+        "bytes": 53229
+      },
+      "bn": {
+        "file": "bn/game_mystery_intro.mp3",
+        "text": "মিস্ট্রি ফাইলস। এমন মানুষদের পাঠানো প্রমাণ, যারা মেজকে একটু বেশিই চেনেন। কে কী পাঠিয়েছে?",
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 57069
+      }
+    },
+    "game_reveal": {
+      "en": {
+        "file": "en/game_reveal.mp3",
+        "text": "Drumroll, please. The moment of truth.",
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 25197
+      },
+      "bn": {
+        "file": "bn/game_reveal.mp3",
+        "text": "ড্রামরোল, প্লিজ। সত্যের মুহূর্ত।",
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 26349
+      }
+    },
+    "surprise_intro": {
+      "en": {
+        "file": "en/surprise_intro.mp3",
+        "text": "Hold everything! We have a special delivery for Mez.",
+        "provider": "gemini/gemini-3.8-flash-tts",
+        "bytes": 34413
+      },
+      "bn": {
+        "file": "bn/surprise_intro.mp3",
+        "text": "সব থামান! মেজের জন্য একটা বিশেষ বার্তা এসেছে।",
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 37869
+      }
+    },
+    "memory_intro": {
+      "en": {
+        "file": "en/memory_intro.mp3",
+        "text": "Someone sent a memory for Mez. Get the tissues ready. Or the popcorn.",
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 46893
+      },
+      "bn": {
+        "file": "bn/memory_intro.mp3",
+        "text": "কেউ মেজের জন্য একটা স্মৃতি পাঠিয়েছেন। টিস্যু তৈরি রাখুন। অথবা পপকর্ন।",
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 48237
+      }
+    },
+    "ptt_thinking": {
+      "en": {
+        "file": "en/ptt_thinking.mp3",
+        "text": "Hmm. Let me consult my circuits.",
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 27309
+      },
+      "bn": {
+        "file": "bn/ptt_thinking.mp3",
+        "text": "হুম। আমার সার্কিটের সাথে একটু পরামর্শ করে নিই।",
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 32493
+      }
+    },
+    "ptt_fallback": {
+      "en": {
+        "file": "en/ptt_fallback.mp3",
+        "text": "My circuits just fainted. Let's pretend I said something brilliant.",
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 42093
+      },
+      "bn": {
+        "file": "bn/ptt_fallback.mp3",
+        "text": "আমার সার্কিট অজ্ঞান হয়ে গেল। ধরে নিন আমি দারুণ কিছু বলেছি।",
+        "provider": "gemini/gemini-3.1-flash-tts-preview",
+        "bytes": 41709
       }
     }
   }

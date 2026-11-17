@@ -1,5 +1,5 @@
 import { IMPOSTER, timerMs } from "./config";
-import { clean, err, line, nameOf, ok, playerSubject, shuffle, type Actor, type Env, type GameModule, type GCtx, type GameAction } from "./common";
+import { clean, clip, err, line, reveal, nameOf, ok, playerSubject, shuffle, type Actor, type Env, type GameModule, type GCtx, type GameAction } from "./common";
 import { similar } from "./text";
 import type { Award, ImposterGame, Step } from "./types";
 
@@ -32,18 +32,13 @@ export function startImposter(env: Env, ctx: GCtx): Step<ImposterGame> {
       result: null,
     },
     {
-      line: line(
-        "imposter",
-        `Mez Imposter! Check your phone, secretly. Everyone has the same word, except ${count === 1 ? "one imposter" : "two imposters"}. Category: ${cat.category}.`,
-        `মেজ ইম্পোস্টার! গোপনে ফোন দেখুন। সবার একই শব্দ, শুধু ${count === 1 ? "একজন" : "দুজন"} ইম্পোস্টার ছাড়া। বিষয়: ${cat.category}।`,
-        true,
-      ),
+      line: clip("game_imposter_intro"),
       audit: `Imposter round dealt to ${playing.length} players (${count} imposter${count > 1 ? "s" : ""}), drawn at random`,
     },
   );
 }
 
-function reveal(g: ImposterGame, env: Env): Step<ImposterGame> & { end?: boolean } {
+function revealRound(g: ImposterGame, env: Env): Step<ImposterGame> & { end?: boolean } {
   const tally: Record<string, number> = {};
   for (const target of Object.values(g.votes)) tally[target] = (tally[target] ?? 0) + 1;
   const max = Math.max(0, ...Object.values(tally));
@@ -73,8 +68,8 @@ function reveal(g: ImposterGame, env: Env): Step<ImposterGame> & { end?: boolean
     {
       awards: awards.filter((a) => a.delta !== 0),
       line: caughtId
-        ? line("imposterReveal", `Caught! The imposter was ${names}. The word was ${g.word}.`, `ধরা পড়েছে! ইম্পোস্টার ছিলেন ${names}। শব্দটা ছিল ${g.word}।`, true)
-        : line("imposterReveal", `The imposter escapes! It was ${names} all along. The word was ${g.word}.`, `ইম্পোস্টার পালিয়ে গেল! এতক্ষণ ছিলেন ${names}। শব্দটা ছিল ${g.word}।`, true),
+        ? reveal("imposterReveal", `Caught! The imposter was ${names}. The word was ${g.word}.`, `ধরা পড়েছে! ইম্পোস্টার ছিলেন ${names}। শব্দটা ছিল ${g.word}।`)
+        : reveal("imposterReveal", `The imposter escapes! It was ${names} all along. The word was ${g.word}.`, `ইম্পোস্টার পালিয়ে গেল! এতক্ষণ ছিলেন ${names}। শব্দটা ছিল ${g.word}।`),
     },
   );
 }
@@ -89,7 +84,7 @@ export const imposter: GameModule<ImposterGame, ImposterView> = {
       case "cluesShown":
         return ok({ ...g, step: "vote", stepEndsAt: ctx.now + timerMs("imposterVote") }, { line: line("imposterVote", "Vote! Who is the imposter?", "ভোট দিন! ইম্পোস্টার কে?") });
       case "vote":
-        return reveal(g, env);
+        return revealRound(g, env);
       case "reveal":
         return ok(g, { end: true });
     }

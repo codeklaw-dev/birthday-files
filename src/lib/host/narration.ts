@@ -17,4 +17,5 @@ export interface NarrationManifest {
 }
 
 export const EMPTY_MANIFEST: NarrationManifest = { version: 1, generatedAt: null, clips: {} };
-export const MANIFEST_URL = "/narration/manifest.json";
+/** Approved clips only (served by the app, filtered by the organiser's review). */
+export const MANIFEST_URL = "/api/host/narration";

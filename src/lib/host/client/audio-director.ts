@@ -42,21 +42,43 @@ export class AudioDirector {
   private seen = new Set<string>();
   private manifest: NarrationManifest = EMPTY_MANIFEST;
   private stopToken = 0;
+  private volume = 0.9;
+  private muted = false;
+  private refresher: ReturnType<typeof setInterval> | null = null;
   private state: DirectorState = { unlocked: false, speaking: null };
   private listeners = new Set<(s: DirectorState) => void>();
 
   constructor(private readonly report = true) {}
 
   async init() {
-    try {
-      const res = await fetch(MANIFEST_URL, { cache: "no-cache" });
-      if (res.ok) this.manifest = await res.json();
-    } catch {}
+    await this.loadManifest();
+    // Approvals can change during the show; pick them up without a reload.
+    this.refresher = setInterval(() => void this.loadManifest(), 20_000);
     // Kiosk browsers launched with an autoplay flag start unlocked.
     try {
       this.ctx = new AudioContext();
       if (this.ctx.state === "running") this.set({ unlocked: true });
     } catch {}
+  }
+
+  private async loadManifest() {
+    try {
+      const res = await fetch(MANIFEST_URL, { cache: "no-store" });
+      if (res.ok) this.manifest = await res.json();
+    } catch {}
+  }
+
+  dispose() {
+    if (this.refresher) clearInterval(this.refresher);
+    this.stop();
+  }
+
+  /** TV volume (0–1) and mute-everything, from the host dashboard. */
+  setLevels(volume: number, muted: boolean) {
+    this.volume = Math.min(1, Math.max(0, volume));
+    this.muted = muted;
+    if (this.audio) this.audio.volume = this.muted ? 0 : this.volume;
+    if (muted) this.stop();
   }
 
   subscribe(fn: (s: DirectorState) => void) {
@@ -88,7 +110,7 @@ export class AudioDirector {
   }
 
   sfx(kind: SfxKind) {
-    if (this.ctx && this.state.unlocked) playSfx(this.ctx, kind);
+    if (this.ctx && this.state.unlocked && !this.muted) playSfx(this.ctx, kind, 0.55 * this.volume);
   }
 
   /**
@@ -104,7 +126,7 @@ export class AudioDirector {
       const fx = cueSfx(u.cue, u.clip);
       if (fx) this.sfx(fx);
     }
-    if (!opts.voice) return;
+    if (!opts.voice || this.muted) return;
     const langs: Lang[] = u.lang === "both" ? ["en", "bn"] : [u.lang];
     const jobs = langs.map((lang) => ({ u, lang, live: this.needsLive(u, lang) ? this.fetchLive(u, lang) : null, queuedAt: performance.now() }));
     this.queue.push(...jobs);
@@ -226,6 +248,7 @@ export class AudioDirector {
     return new Promise((resolve) => {
       this.audio ??= new Audio();
       const a = this.audio;
+      a.volume = this.muted ? 0 : this.volume;
       let settled = false;
       const finish = (ok: boolean) => {
         if (settled) return;
@@ -250,6 +273,7 @@ export class AudioDirector {
     if (!voice) return Promise.resolve(false);
     return new Promise((resolve) => {
       const utter = new SpeechSynthesisUtterance(text);
+      utter.volume = this.muted ? 0 : this.volume;
       utter.voice = voice;
       utter.lang = voice.lang;
       utter.onend = () => resolve(token === this.stopToken);

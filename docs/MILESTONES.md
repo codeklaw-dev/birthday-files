@@ -77,6 +77,18 @@ The party is on **21 November 2026**. Re-planned on 16 November around the new r
 - [ ] Rehearse each game once with real guests' submissions (timings, wording, Bangla lines)
 - [ ] Decide the order of games for the night and the prize wheel moments
 
+## Phase 4, Milestone 8 — AI host modes ✅
+
+- [x] Provider-independent host, with no Casper code left; witty, cheeky, affectionate personality; host identity kept out of the invitation (and out of its JavaScript bundle; a leak via a shared UI module was found and fixed)
+- [x] Narrator: game intros, reveals, jokes, leaderboards and finale from organiser-approved pre-generated clips; dynamic lines fall back to recorded ones
+- [x] Push-to-talk: hold-only mic (max 20 s), editable transcript, language override, timeouts, thinking line, prepared fallback line, TV-only playback
+- [x] Surprise: approved announcements (voice pre-generated and cached) and consented memory reveals
+- [x] Separate knowledge store (personality, approved facts, announcements, approvals, conversation memory); scene context from the public view only; AI limited to speaking
+- [x] Subtitles toggle, TV volume, mute all, stop, replay
+- [x] Tests: 14 unit/route tests; offline rehearsal browser run (15 checks) with every cloud service failing
+- [ ] Record the last 13 placeholder clips (`npm run narration:render` after the quota resets), then review and approve all clips
+- [ ] Native speaker listens to the Bangla clips
+
 ## After the party is safe (not scheduled)
 
 - Supabase + Vercel hosting; surprise reveals; a printable "results" page for Mez.

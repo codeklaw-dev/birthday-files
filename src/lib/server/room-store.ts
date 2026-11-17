@@ -27,7 +27,11 @@ function loadSnapshot(): RoomState | null {
     // v2 snapshots predate the games: add the games fields with defaults.
     const { scoreLog: _old, ...rest } = raw.state as RoomState & { scoreLog?: unknown };
     void _old;
-    return { ...freshGames(), ...rest } as RoomState;
+    // Older snapshots predate surprises and the TV audio settings: fill in defaults.
+    const defaults = { ...freshGames(), surprise: null } as Partial<RoomState>;
+    const state = Object.assign(defaults, rest) as RoomState;
+    const hostDefaults = { volume: 0.9, muted: false, subtitles: true };
+    return { ...state, host: Object.assign(hostDefaults, state.host) };
   } catch {
     return null;
   }

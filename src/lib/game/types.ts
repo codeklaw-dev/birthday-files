@@ -19,7 +19,8 @@ export type Phase =
   | "finished"
   | "game"
   | "wheel"
-  | "boards";
+  | "boards"
+  | "surprise";
 
 export type Lang = "en" | "bn";
 export type Bilingual = Record<Lang, string>;
@@ -58,7 +59,22 @@ export interface GuestMessage {
 }
 
 /** Full authoritative state. Lives on the server only. */
+/** A surprise on the TV: an approved announcement or a guest's memory for Mez. Built by the server. */
+export interface SurpriseContent {
+  id: string;
+  kind: "announcement" | "memory";
+  title: string;
+  text: Bilingual;
+  from: string | null;
+  mediaId: string | null;
+}
+export interface Surprise extends SurpriseContent {
+  at: number;
+  returnPhase: Phase;
+}
+
 export interface RoomState extends GamesSlice {
+  surprise: Surprise | null;
   code: string;
   phase: Phase;
   players: Player[];
@@ -112,6 +128,10 @@ export interface RoomView {
   cake: { candles: number; lit: number };
   host: HostView;
   games: GamesView;
+  /** mediaUrl is filled in by the server (signed link) for the TV, judge and host. */
+  surprise: (SurpriseContent & { at: number; mediaUrl: string | null }) | null;
+  /** The host's display name from the organiser's personality settings (filled in by the server). */
+  hostName?: string;
   /** LAN hints so the display can render a QR code phones can reach. */
   lanHosts?: string[];
 }
@@ -142,7 +162,13 @@ export type HostAction =
   | { type: "host/quip" }
   | { type: "host/replay" }
   | { type: "host/stopSpeech" }
-  | { type: "host/sfx"; kind: SfxKind };
+  | { type: "host/sfx"; kind: SfxKind }
+  | { type: "host/setVolume"; volume: number }
+  | { type: "host/setMuted"; muted: boolean }
+  | { type: "host/setSubtitles"; on: boolean }
+  /** `surprise` is always built by the server from approved content; clients send { kind, id }. */
+  | { type: "host/surprise/show"; surprise: SurpriseContent }
+  | { type: "host/surprise/end" };
 
 /** Fired by the server timer, never accepted from clients. */
 export type SystemAction = { type: "system/timeUp"; questionId: string };

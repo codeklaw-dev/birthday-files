@@ -1,5 +1,5 @@
 import { SURVEY, timerMs } from "./config";
-import { clean, err, line, nameOf, ok, playerSubject, type GameModule, type GCtx, type Env } from "./common";
+import { clip, reveal, clean, err, line, nameOf, ok, playerSubject, type GameModule, type GCtx, type Env } from "./common";
 import { matchGuess } from "./text";
 import type { Award, Step, SurveyContent, SurveyGame } from "./types";
 
@@ -15,7 +15,7 @@ export function startSurvey(content: SurveyContent, ctx: GCtx): Step<SurveyGame>
   return ok(
     { id: "survey", roundId: ctx.newId(), step: "guess", stepEndsAt: ctx.now + timerMs("surveyGuess"), startedAt: ctx.now, index: 0, boards, guesses: {}, matches: {}, revealed: [] },
     {
-      line: line("survey", `Mez Survey! We asked the guests: ${boards[0].prompt} Type the answer you think most people gave.`, `মেজ সার্ভে! আমরা অতিথিদের জিজ্ঞেস করেছিলাম: ${boards[0].prompt} সবচেয়ে বেশি মানুষ কী বলেছে, লিখুন।`, true),
+      line: clip("game_survey_intro"),
       audit: `Mez Survey started with ${boards.length} approved board${boards.length > 1 ? "s" : ""}`,
     },
   );
@@ -33,7 +33,7 @@ function score(g: SurveyGame, env: Env): Step<SurveyGame> {
       awards.push({ board: "live", subject: playerSubject(p), delta: board.answers[m].count * env.points.surveyPerPerson, rule: "surveyPerPerson", note: `"${guess}" matched "${board.answers[m].label}" (${board.answers[m].count} said it)` });
     }
   }
-  return ok({ ...g, step: "reveal", stepEndsAt: null, matches }, { awards, line: line("surveyReveal", "Survey says…", "সার্ভে বলছে…") });
+  return ok({ ...g, step: "reveal", stepEndsAt: null, matches }, { awards, line: reveal("surveyReveal", "Survey says…", "সার্ভে বলছে…") });
 }
 
 export const survey: GameModule<SurveyGame, SurveyView> = {

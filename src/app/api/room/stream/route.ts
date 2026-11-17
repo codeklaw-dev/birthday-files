@@ -3,10 +3,12 @@ import { viewFor } from "@/lib/game/engine";
 import type { Role, RoomState } from "@/lib/game/types";
 import type { RoomView } from "@/lib/game/types";
 import { signedMediaUrlStable } from "@/lib/invite/server/secrets";
+import { knowledge } from "@/lib/host/server/knowledge";
 import { isHostKey, isJudgeKey, lanHosts, roomStore } from "@/lib/server/room-store";
 
 /** Screens that show exhibits get short-lived signed links; phones don't need them. */
 function withMedia(view: RoomView): RoomView {
+  if (view.role !== "player" && view.surprise?.mediaId) view = { ...view, surprise: { ...view.surprise, mediaUrl: signedMediaUrlStable(view.surprise.mediaId) } };
   const g = view.games.game;
   if (view.role === "player" || g?.id !== "mystery" || !g.exhibit.mediaId) return view;
   return { ...view, games: { ...view.games, game: { ...g, exhibit: { ...g.exhibit, mediaUrl: signedMediaUrlStable(g.exhibit.mediaId) } } } };
@@ -37,7 +39,7 @@ export async function GET(req: NextRequest) {
       const send = (state: RoomState) => {
         // A rotated judge key signs the old judge phone out.
         if (role === "judge" && !isJudgeKey(params.get("key"))) return cleanup();
-        const view = withMedia({ ...viewFor(state, role, role === "player" ? token : null, Date.now()), lanHosts: hosts });
+        const view = withMedia({ ...viewFor(state, role, role === "player" ? token : null, Date.now()), lanHosts: hosts, hostName: knowledge().personality().name.en });
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(view)}\n\n`));
         } catch {

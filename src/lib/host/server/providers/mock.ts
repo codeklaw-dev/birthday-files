@@ -99,3 +99,19 @@ export const mockStt: SttProvider = {
       : { text: "Happy birthday Mez! (mock transcript)", lang: "en" };
   },
 };
+
+/** Always fail — to rehearse the show with cloud services down (HOST_LLM_CHAIN / HOST_STT_CHAIN=mock-fail). */
+export const failingLlm: LlmProvider = {
+  id: "mock-fail",
+  configured: () => true,
+  async complete() {
+    throw new Error("simulated outage");
+  },
+};
+export const failingStt: SttProvider = {
+  id: "mock-fail",
+  configured: () => true,
+  async transcribe() {
+    throw new Error("simulated outage");
+  },
+};

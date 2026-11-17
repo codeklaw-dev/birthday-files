@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button, cx, Field, HostLine, Leaderboard, Logo, MessageForm, StatusDot, TILE } from "@/components/ui";
+import { Button, cx, Field, Leaderboard, Logo, MessageForm, StatusDot, TILE } from "@/components/ui";
+import { HostLine } from "@/components/host-line";
 import { useNow, usePlayerToken } from "@/lib/client/hooks";
 import { useRoom, type RoomConnection } from "@/lib/client/use-room";
 import { AVATARS } from "@/lib/game/mock-data";
@@ -157,6 +158,7 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
 
       {view.phase === "game" && view.games.game && <GamePanel view={view} room={room} token={token} />}
       {view.phase === "wheel" && <WheelPanel view={view} room={room} token={token} />}
+      {view.phase === "surprise" && <Section title="Surprise!" body="Eyes on the big screen." />}
       {view.phase === "boards" && (
         <Section title="Leaderboards" body="Live Games Champion standings. Mez Expert is up on the TV.">
           <Leaderboard players={view.players} meId={me.id} limit={10} />
@@ -164,7 +166,7 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
       )}
 
       <div className="mt-auto pt-2">
-        <HostLine host={view.host} />
+        <HostLine host={view.host} name={view.hostName} />
       </div>
     </div>
   );

@@ -21,12 +21,17 @@ export function useHostAudio(view: RoomView | null) {
     void d.init();
     return () => {
       off();
-      d.stop();
+      d.dispose();
     };
   }, []);
 
   const host = view?.host;
   const serverNow = view?.serverNow;
+  const volume = host?.volume ?? 0.9;
+  const muted = host?.muted ?? false;
+  useEffect(() => {
+    directorRef.current?.setLevels(volume, muted);
+  }, [volume, muted]);
   useEffect(() => {
     const d = directorRef.current;
     if (!d || !host || serverNow === undefined) return;

@@ -1,5 +1,6 @@
 import type { Action } from "@/lib/game/types";
-import { buildContent, buildSurveyBoard, contributorById } from "@/lib/games/server/content";
+import { buildContent, buildSurveyBoard, contributorById, eligibleSubmissions } from "@/lib/games/server/content";
+import { knowledge } from "@/lib/host/server/knowledge";
 import type { GameId } from "@/lib/games/types";
 import { ensureHostService } from "@/lib/host/server/service";
 import { clientIp, rateLimit } from "@/lib/server/rate-limit";
@@ -46,6 +47,19 @@ export async function POST(req: Request) {
       if (typeof board === "string") return fail(board, 422);
       action = { type, questionId, board } as typeof action;
     }
+  }
+  // Surprises are built here from approved content only; clients just name which one.
+  if (type === "host/surprise/show") {
+    const id = String(action.id ?? "");
+    if (action.kind === "announcement") {
+      const a = knowledge().announcement(id);
+      if (!a || a.status !== "approved") return fail("Only approved announcements can be shown.", 422);
+      action = { type, surprise: { id: a.id, kind: "announcement", title: a.title, text: a.text, from: null, mediaId: null } } as typeof action;
+    } else if (action.kind === "memory") {
+      const s = eligibleSubmissions().find((x) => x.id === id && x.data.memory);
+      if (!s) return fail("Only approved memories the guest allowed us to show can be revealed.", 422);
+      action = { type, surprise: { id: s.id, kind: "memory", title: `A memory from ${s.data.name}`, text: { en: s.data.memory, bn: s.data.memory }, from: s.data.name, mediaId: s.photo?.id ?? null } } as typeof action;
+    } else return fail("Unknown surprise.", 422);
   }
   if (type === "host/correct" && (action.subject as { kind?: string })?.kind === "contributor") {
     const c = contributorById(String((action.subject as { id?: string }).id ?? ""));

@@ -1,4 +1,4 @@
-import { availableLang, customLine, hostView, initialHost, speak } from "@/lib/host/host-state";
+import { availableLang, customLine, hostView, initialHost, resolveLang, speak } from "@/lib/host/host-state";
 import { CLIP_KEYS, LINES, type ClipKey } from "@/lib/host/script";
 import { SFX_KINDS, type HostState, type Line } from "@/lib/host/types";
 import type { GamesAction } from "@/lib/games/actions";
@@ -53,6 +53,7 @@ export function createRoom(code = "MEZ26", now = 0, judgeKey = ""): RoomState {
     lastGains: {},
     messages: [],
     ...freshGames(judgeKey),
+    surprise: null,
     cake: { candles: LIMITS.candles, blows: 0, perCandle: 3 },
     host: initialHost("u0", now),
     rev: 0,
@@ -341,6 +342,38 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
     case "host/stopSpeech":
       return ok({ ...state, host: { ...state.host, stopId: ctx.newId() } });
 
+    case "host/setVolume": {
+      const v = Number(action.volume);
+      if (!Number.isFinite(v) || v < 0 || v > 1) return fail("Volume goes from 0 to 1.");
+      return ok({ ...state, host: { ...state.host, volume: Math.round(v * 100) / 100 } });
+    }
+    case "host/setMuted":
+      return ok({ ...state, host: { ...state.host, muted: !!action.muted } });
+    case "host/setSubtitles":
+      return ok({ ...state, host: { ...state.host, subtitles: !!action.on } });
+
+    case "host/surprise/show": {
+      if (state.game) return fail("Finish or stop the current game first.");
+      if (state.phase === "question") return fail("Reveal the current question first.");
+      const c = action.surprise;
+      if (!c || (c.kind !== "announcement" && c.kind !== "memory")) return fail("Surprise content missing.");
+      const text =
+        c.kind === "memory"
+          ? { en: `A memory for Mez from ${c.from}: ${c.text.en || c.text.bn}`, bn: `মেজের জন্য ${c.from}-এর একটা স্মৃতি: ${c.text.bn || c.text.en}` }
+          : c.text;
+      const lang = availableLang(c.text, resolveLang(state.host.mode, state.host.count, true)) ?? "both";
+      const line: Line = { cue: c.kind, text, fallbackClip: c.kind === "memory" ? "memory_intro" : "surprise_intro", bigMoment: true };
+      return ok({
+        ...state,
+        phase: "surprise",
+        surprise: { ...c, at: now, returnPhase: state.phase === "surprise" ? (state.surprise?.returnPhase ?? "lobby") : state.phase },
+        host: { ...speak(state.host, line, ctx, { source: "host", lang }), sfx: { id: ctx.newId(), kind: "fanfare", at: now } },
+      });
+    }
+    case "host/surprise/end":
+      if (!state.surprise) return fail("No surprise on screen.");
+      return ok({ ...state, phase: state.surprise.returnPhase === "game" ? "boards" : state.surprise.returnPhase, surprise: null });
+
     case "host/sfx":
       if (!SFX_KINDS.includes(action.kind)) return fail("Unknown sound.");
       return ok({ ...state, host: { ...state.host, sfx: { id: ctx.newId(), kind: action.kind, at: now } } });
@@ -387,5 +420,8 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
     cake: { candles: state.cake.candles, lit: candlesLit(state.cake) },
     host: hostView(state.host),
     games: gamesView(state, { role, playerId: me?.id ?? null }),
+    surprise: state.surprise
+      ? { id: state.surprise.id, kind: state.surprise.kind, title: state.surprise.title, text: state.surprise.text, from: state.surprise.from, mediaId: state.surprise.mediaId, at: state.surprise.at, mediaUrl: null }
+      : null,
   };
 }

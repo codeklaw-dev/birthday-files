@@ -3,7 +3,8 @@ import { fail, json, requireHost } from "@/lib/invite/server/http";
 import { inviteStore } from "@/lib/invite/server/store";
 
 /** Public: the three questions the invite asks. */
-export async function GET() {
+export async function GET(req: Request) {
+  void req.headers; // per request: questions are edited at runtime
   return json({ ok: true, questions: inviteStore().questions() });
 }
 

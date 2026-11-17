@@ -291,7 +291,7 @@ describe("host moderation", () => {
     ];
     expect((await settings.PUT(req("PUT", "/api/invite/settings", { json: { questions: qs.slice(0, 2) }, headers: host }))).status).toBe(422);
     expect((await settings.PUT(req("PUT", "/api/invite/settings", { json: { questions: qs }, headers: host }))).status).toBe(200);
-    expect((await body(await settings.GET())).questions[1].prompt).toBe("Mez's most-used emoji?");
+    expect((await body(await settings.GET(new Request("http://x/api/invite/settings")))).questions[1].prompt).toBe("Mez's most-used emoji?");
   });
 });
 

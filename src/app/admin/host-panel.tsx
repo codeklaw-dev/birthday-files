@@ -88,6 +88,26 @@ export function HostControls({ view, act }: { view: RoomView; act: Act }) {
         </div>
         <p className="-mt-2 text-xs text-haze">Auto alternates English and Bangla line by line and uses both for big moments.</p>
 
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-white/10 p-3">
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-haze">TV volume</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              defaultValue={Math.round(host.volume * 100)}
+              aria-label="TV volume"
+              onPointerUp={(e) => act({ type: "host/setVolume", volume: Number((e.target as HTMLInputElement).value) / 100 })}
+              onKeyUp={(e) => act({ type: "host/setVolume", volume: Number((e.target as HTMLInputElement).value) / 100 })}
+              className="accent-[var(--color-gold)]"
+            />
+            <span className="w-10 font-mono text-xs tabular-nums">{Math.round(host.volume * 100)}%</span>
+          </label>
+          <Toggle on={host.muted} label="Mute all sound" onChange={(muted) => act({ type: "host/setMuted", muted })} />
+          <Toggle on={host.subtitles} label="Subtitles on TV" onChange={(on) => act({ type: "host/setSubtitles", on })} />
+        </div>
+
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => act({ type: "host/replay" })}>
             <Repeat className="size-4" aria-hidden /> Say it again
@@ -261,135 +281,210 @@ export function HostWriter({ act, hostKey }: { act: Act; hostKey: string }) {
   );
 }
 
-interface ListenResult {
-  ok: boolean;
-  error?: string;
-  transcript?: string;
-  heardLang?: Lang | null;
-  reply?: Partial<Record<Lang, string>>;
-  replyLang?: Lang;
-  timings?: { sttMs: number; llmMs: number; totalMs: number };
-  providers?: { stt: string; llm: string };
-}
+const MAX_RECORD_MS = 20_000;
+type PttState = "idle" | "recording" | "transcribing" | "replying";
 
-/** Hold to talk: laptop mic → cloud STT → LLM → host replies on the TV. */
-export function PushToTalk({ hostKey }: { hostKey: string }) {
-  const [state, setState] = useState<"idle" | "recording" | "thinking">("idle");
-  const [hint, setHint] = useState<"" | Lang>("");
-  const [speak, setSpeak] = useState(true);
-  const [result, setResult] = useState<ListenResult | null>(null);
+/**
+ * Push-to-talk with Mez. The microphone opens only while the button is held
+ * (never in the background) and stops after 20 s. Speech → text (editable) →
+ * reply in the host's voice, played on the TV only.
+ */
+export function PushToTalk({ hostKey, act }: { hostKey: string; act: Act }) {
+  const [state, setState] = useState<PttState>("idle");
+  const [lang, setLang] = useState<"auto" | Lang>("auto");
+  const [auto, setAuto] = useState(true);
+  const [thinking, setThinking] = useState(true);
+  const [transcript, setTranscript] = useState("");
+  const [heardLang, setHeardLang] = useState<Lang | null>(null);
+  const [reply, setReply] = useState<{ text: string; lang: Lang; meta: string; spoken: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
   const rec = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const startedAt = useRef(0);
+  const ticker = useRef<ReturnType<typeof setInterval> | null>(null);
   const [secure, setSecure] = useState(true);
   useEffect(() => {
     const t = setTimeout(() => setSecure(window.isSecureContext && !!navigator.mediaDevices?.getUserMedia), 0);
     return () => clearTimeout(t);
   }, []);
 
+  const askReply = useCallback(
+    async (text: string, speak: boolean) => {
+      setState("replying");
+      setError(null);
+      try {
+        const res = await fetch("/api/host/reply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-host-key": hostKey },
+          body: JSON.stringify({ transcript: text, lang: lang === "auto" ? (heardLang ?? "auto") : lang, speak, thinking: speak && thinking }),
+          signal: AbortSignal.timeout(15_000),
+        });
+        const body = await res.json();
+        if (body.ok) {
+          const l: Lang = body.lang;
+          setReply({ text: body.reply[l], lang: l, meta: `${body.provider} · ${body.ms} ms`, spoken: body.spoken });
+        } else setError(body.fallback ? `${body.error}` : (body.error ?? "No reply."));
+      } catch {
+        setError("The reply took too long. Nothing was spoken; try again or play a prepared line.");
+      } finally {
+        setState("idle");
+      }
+    },
+    [hostKey, lang, heardLang, thinking],
+  );
+
+  const finish = useCallback(async () => {
+    if (ticker.current) clearInterval(ticker.current);
+    const blob = new Blob(chunks.current, { type: rec.current?.mimeType || "audio/webm" });
+    if (Date.now() - startedAt.current < 500 || blob.size === 0) {
+      setState("idle");
+      setError("Hold the button while Mez talks.");
+      return;
+    }
+    setState("transcribing");
+    const form = new FormData();
+    form.append("audio", blob, "clip");
+    if (lang !== "auto") form.append("lang", lang);
+    try {
+      const res = await fetch("/api/host/transcribe", { method: "POST", headers: { "x-host-key": hostKey }, body: form, signal: AbortSignal.timeout(15_000) });
+      const body = await res.json();
+      if (!body.ok) {
+        setState("idle");
+        setError(`${body.error} You can type it below.`);
+        return;
+      }
+      setTranscript(body.transcript);
+      setHeardLang(body.lang);
+      setReply(null);
+      if (auto) await askReply(body.transcript, true);
+      else setState("idle");
+    } catch {
+      setState("idle");
+      setError("Transcription took too long. Type what Mez said below.");
+    }
+  }, [auto, askReply, hostKey, lang]);
+
   const start = useCallback(async () => {
     if (state !== "idle") return;
     setError(null);
     try {
+      // The microphone is requested only now, on a deliberate press.
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       const r = new MediaRecorder(stream);
       chunks.current = [];
       r.ondataavailable = (e) => e.data.size && chunks.current.push(e.data);
-      r.onstop = async () => {
+      r.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        if (Date.now() - startedAt.current < 400) {
-          setState("idle");
-          setError("Hold the button while you talk.");
-          return;
-        }
-        setState("thinking");
-        const form = new FormData();
-        form.append("audio", new Blob(chunks.current, { type: r.mimeType }), "clip");
-        if (hint) form.append("lang", hint);
-        form.append("speak", speak ? "1" : "0");
-        try {
-          const res = await fetch("/api/host/listen", { method: "POST", headers: { "x-host-key": hostKey }, body: form });
-          const body = (await res.json()) as ListenResult;
-          setResult(body);
-          if (!body.ok) setError(body.error ?? "That didn't work.");
-        } catch {
-          setError("Couldn't reach the server.");
-        } finally {
-          setState("idle");
-        }
+        void finish();
       };
       rec.current = r;
       startedAt.current = Date.now();
       r.start();
       setState("recording");
+      setElapsed(0);
+      ticker.current = setInterval(() => {
+        const ms = Date.now() - startedAt.current;
+        setElapsed(ms);
+        if (ms >= MAX_RECORD_MS && r.state === "recording") r.stop();
+      }, 200);
     } catch (e) {
       setError((e as Error).name === "NotAllowedError" ? "Microphone permission was refused." : "No microphone available.");
     }
-  }, [state, hint, speak, hostKey]);
+  }, [state, finish]);
 
   const stop = useCallback(() => {
     if (rec.current?.state === "recording") rec.current.stop();
   }, []);
 
   return (
-    <Card title="Talk to the host">
-      {!secure ? (
-        <p className="text-sm text-haze">
-          The microphone only works on a secure page. Open the dashboard as <code className="text-gold">http://localhost:3000/admin</code> on the laptop (not its network address), or over HTTPS.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-3">
+    <Card title="Talk to Mez (push-to-talk)">
+      <div className="flex flex-col gap-3">
+        {!secure ? (
+          <p className="text-sm text-haze">
+            The microphone only works on a secure page: open the dashboard as <code className="text-gold">http://localhost:3000/admin</code> on the laptop, or over HTTPS. You can still type below.
+          </p>
+        ) : (
           <button
             onPointerDown={start}
             onPointerUp={stop}
             onPointerLeave={stop}
+            onPointerCancel={stop}
             onKeyDown={(e) => (e.key === " " || e.key === "Enter") && !e.repeat && start()}
             onKeyUp={(e) => (e.key === " " || e.key === "Enter") && stop()}
-            disabled={state === "thinking"}
+            disabled={state === "transcribing" || state === "replying"}
             className={cx(
               "flex min-h-20 select-none items-center justify-center gap-3 rounded-2xl text-lg font-bold transition",
               state === "recording" ? "bg-stamp text-cream" : "bg-white/10 text-cream hover:bg-white/15",
-              state === "thinking" && "opacity-60",
+              (state === "transcribing" || state === "replying") && "opacity-60",
             )}
           >
             <Mic className={cx("size-6", state === "recording" && "animate-pulse")} aria-hidden />
-            {state === "recording" ? "Listening… release to send" : state === "thinking" ? "Thinking…" : "Hold to talk"}
+            {state === "recording"
+              ? `Listening… ${Math.ceil((MAX_RECORD_MS - elapsed) / 1000)}s left, release to send`
+              : state === "transcribing"
+                ? "Transcribing…"
+                : state === "replying"
+                  ? "Writing a reply…"
+                  : "Hold to talk"}
           </button>
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <label className="flex items-center gap-2">
-              <span className="text-haze">Guest speaks</span>
-              <select className="input !w-auto !py-1" value={hint} onChange={(e) => setHint(e.target.value as "" | Lang)}>
-                <option value="">auto-detect</option>
-                <option value="en">English</option>
-                <option value="bn">Bangla</option>
-              </select>
-            </label>
-            <Toggle on={speak} label="Reply on TV automatically" onChange={setSpeak} />
-          </div>
-          {result?.ok && (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm">
-              <p>
-                <span className="text-haze">Heard ({result.heardLang ?? "?"}):</span> {result.transcript}
-              </p>
-              <p className="mt-1">
-                <span className="text-haze">Reply:</span> {result.reply?.[result.replyLang ?? "en"]}
-              </p>
-              <p className="mt-2 font-mono text-xs text-haze">
-                {result.providers?.stt} {result.timings?.sttMs} ms → {result.providers?.llm} {result.timings?.llmMs} ms · total {result.timings?.totalMs} ms
-              </p>
-            </div>
-          )}
-          {error && <p role="alert" className="text-sm text-stamp">{error}</p>}
+        )}
+        <p className="text-xs text-haze">Only records while the button is held (max 20 s). Nothing listens in the background. Replies play on the TV only.</p>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+          <label className="flex items-center gap-2">
+            <span className="text-haze">Language</span>
+            <select className="input !w-auto !py-1" value={lang} onChange={(e) => setLang(e.target.value as "auto" | Lang)} aria-label="Language override">
+              <option value="auto">Auto</option>
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+          </label>
+          <Toggle on={auto} label="Reply automatically" onChange={setAuto} />
+          <Toggle on={thinking} label="Thinking line while waiting" onChange={setThinking} />
         </div>
-      )}
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-xs text-haze">What Mez said {heardLang && `(heard as ${heardLang === "bn" ? "Bangla" : "English"})`}. Fix any mistakes, then reply.</span>
+          <textarea className="input resize-none" rows={2} maxLength={400} value={transcript} onChange={(e) => setTranscript(e.target.value)} aria-label="Transcript" placeholder="Transcript appears here, or type it" />
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" disabled={transcript.trim().length < 2 || state !== "idle"} onClick={() => askReply(transcript, true)}>
+            <Play className="size-4" aria-hidden /> Reply on TV
+          </Button>
+          <Button disabled={transcript.trim().length < 2 || state !== "idle"} onClick={() => askReply(transcript, false)}>
+            Draft reply only
+          </Button>
+          <Button variant="danger" onClick={() => act({ type: "host/stopSpeech" })}>
+            <Square className="size-4" aria-hidden /> Stop
+          </Button>
+        </div>
+        {reply && (
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-sm">
+            <p lang={reply.lang} className={reply.lang === "bn" ? "font-bangla" : ""}>
+              {reply.text}
+            </p>
+            <p className="mt-1 font-mono text-xs text-haze">
+              {reply.meta} · {reply.spoken ? "spoken on TV" : "draft"}
+            </p>
+            {!reply.spoken && (
+              <Button className="mt-2" onClick={() => act({ type: "host/say", text: { [reply.lang]: reply.text }, lang: reply.lang, source: "conversation" })}>
+                Say on TV
+              </Button>
+            )}
+          </div>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-stamp">
+            {error}
+          </p>
+        )}
+      </div>
     </Card>
   );
 }
 
 interface StatusBody {
   chains: { kind: string; providers: { id: string; configured: boolean; resting: boolean; calls: number; failures: number; avgMs: number | null; lastError: string | null }[] }[];
-  narration: { total: number; en: number; bn: number; placeholders: number; stale: number };
+  narration: { total: number; en: number; bn: number; placeholders: number; stale: number; approved: number };
   geminiVoices: { model: string; available: boolean; until: number | null }[];
   playback: { utteranceId: string; lang: Lang; via: string; provider?: string; latencyMs: number; error?: string; at: number }[];
 }
@@ -423,13 +518,13 @@ export function HostStatus({ hostKey }: { hostKey: string }) {
         <div>
           <div className="mb-1 text-xs uppercase tracking-widest text-haze">Pre-recorded narration</div>
           <p>
-            English {n.en}/{n.total} · Bangla {n.bn}/{n.total}
+            English {n.en}/{n.total} · Bangla {n.bn}/{n.total} · <span className={n.approved ? "text-go" : "text-gold"}>{n.approved} approved for the TV</span>
             {n.placeholders > 0 && <span className="text-gold"> · {n.placeholders} robotic placeholders</span>}
             {n.stale > 0 && <span className="text-stamp"> · {n.stale} out of date</span>}
           </p>
           {(n.placeholders > 0 || n.en + n.bn < n.total * 2) && (
             <p className="mt-1 text-xs text-haze">
-              Run <code className="text-gold">npm run narration:render</code> once a cloud voice is configured.
+              Run <code className="text-gold">npm run narration:render</code> once a cloud voice is configured, then review clips in <a className="text-gold underline" href="/admin/host">AI host setup</a>.
             </p>
           )}
         </div>
@@ -481,6 +576,83 @@ export function HostStatus({ hostKey }: { hostKey: string }) {
           )}
         </div>
       </div>
+    </Card>
+  );
+}
+
+interface SurpriseList {
+  announcements: { id: string; title: string; text: { en: string; bn: string }; prepared: Partial<Record<Lang, string>> }[];
+  memories: { id: string; name: string; remote: boolean; memory: string; hasPhoto: boolean }[];
+}
+
+/** Surprise mode: trigger approved announcements or reveal a guest's memory on the TV. */
+export function SurpriseControl({ view, act, hostKey }: { view: RoomView; act: Act; hostKey: string }) {
+  const [list, setList] = useState<SurpriseList | null>(null);
+  useEffect(() => {
+    let live = true;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/host/surprises", { headers: { "x-host-key": hostKey } });
+        if (res.ok && live) setList(await res.json());
+      } catch {}
+    };
+    void load();
+    const id = setInterval(load, 20_000);
+    return () => {
+      live = false;
+      clearInterval(id);
+    };
+  }, [hostKey]);
+  const busy = !!view.games.game || view.phase === "question";
+  return (
+    <Card title="Surprises" aside={<a href="/admin/host" className="text-xs text-gold hover:underline">Write & approve</a>}>
+      {view.phase === "surprise" && (
+        <Button variant="primary" className="mb-3 w-full" onClick={() => act({ type: "host/surprise/end" })}>
+          End surprise & go back
+        </Button>
+      )}
+      {busy && <p className="mb-2 text-xs text-gold">Finish the current game or question first.</p>}
+      {!list ? (
+        <p className="text-sm text-haze">Loading…</p>
+      ) : list.announcements.length + list.memories.length === 0 ? (
+        <p className="text-sm text-haze">Nothing approved yet. Write announcements in AI host setup; memories come from approved invite submissions.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {list.announcements.length > 0 && (
+            <ul className="flex flex-col gap-1.5">
+              {list.announcements.map((a) => (
+                <li key={a.id} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">
+                  <span className="min-w-0 flex-1 truncate">
+                    <strong>{a.title}</strong>
+                    <span className="ml-2 font-mono text-xs text-haze">
+                      {(["en", "bn"] as const).filter((l) => a.text[l]).map((l) => `${l}: ${a.prepared[l] ?? "…"}`).join(" · ")}
+                    </span>
+                  </span>
+                  <Button disabled={busy} onClick={() => act({ type: "host/surprise/show", kind: "announcement", id: a.id } as never)}>
+                    Play
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {list.memories.length > 0 && (
+            <ul className="flex flex-col gap-1.5">
+              {list.memories.map((m) => (
+                <li key={m.id} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm">
+                  <span className="min-w-0 flex-1 truncate" title={m.memory}>
+                    <strong>{m.name}</strong>
+                    {m.remote && <span className="ml-1 text-tile-b">remote</span>}
+                    {m.hasPhoto && <span className="ml-1 text-haze">+ photo</span>}: <span className="text-haze">{m.memory}</span>
+                  </span>
+                  <Button disabled={busy} onClick={() => act({ type: "host/surprise/show", kind: "memory", id: m.id } as never)}>
+                    Reveal
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

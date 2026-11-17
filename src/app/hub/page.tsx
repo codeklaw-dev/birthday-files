@@ -4,6 +4,7 @@ import { EVENT } from "@/lib/event";
 
 const SCREENS = [
   { href: "/admin", name: "Host dashboard", device: "Laptop · private", blurb: "Run the show, moderate messages, award points." },
+  { href: "/admin/host", name: "AI host setup", device: "Laptop · private", blurb: "Personality, guest facts, surprise announcements, narration review." },
   { href: "/admin/games", name: "Games setup", device: "Laptop · private", blurb: "Approve survey boards, choose trial charges, set the points rules." },
   { href: "/judge", name: "Mez's judge phone", device: "Mez's phone · private", blurb: "Open it from the judge link or QR on the host dashboard." },
   { href: "/admin/submissions", name: "Guest submissions", device: "Laptop · private", blurb: "RSVPs, answers, photos and videos: review and order them." },

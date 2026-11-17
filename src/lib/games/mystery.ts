@@ -1,5 +1,5 @@
 import { MYSTERY, timerMs } from "./config";
-import { err, line, nameOf, ok, playerSubject, shuffle, type GameModule, type GCtx } from "./common";
+import { clip, reveal, err, line, nameOf, ok, playerSubject, shuffle, type GameModule, type GCtx } from "./common";
 import type { Award, MysteryContent, MysteryGame, Step } from "./types";
 
 /**
@@ -15,7 +15,7 @@ export function startMystery(content: MysteryContent, ctx: GCtx): Step<MysteryGa
   return ok(
     { id: "mystery", roundId: ctx.newId(), step: "exhibit", stepEndsAt: null, startedAt: ctx.now, index: 0, items, suspects, guesses: {}, mezGuess: null, mezRecord: { right: 0, total: 0 } },
     {
-      line: line("mystery", "Mystery Files. Exhibit one. Who sent this? Mez, you have the case.", "মিস্ট্রি ফাইলস। প্রথম প্রমাণ। এটা কে পাঠিয়েছে? মেজ, তদন্ত তোমার।", true),
+      line: clip("game_mystery_intro"),
       audit: `Mystery Files started with ${items.length} exhibit${items.length > 1 ? "s" : ""}`,
     },
   );
@@ -40,8 +40,8 @@ export const mystery: GameModule<MysteryGame, MysteryView> = {
           {
             awards,
             line: mezRight
-              ? line("mysteryReveal", `Mez cracked it! This file belongs to ${item.contributor.name}.`, `মেজ ধরে ফেলেছে! এটা ${item.contributor.name}-এর ফাইল।`, true)
-              : line("mysteryReveal", `This file belongs to ${item.contributor.name}!`, `এটা ${item.contributor.name}-এর ফাইল!`, true),
+              ? reveal("mysteryReveal", `Mez cracked it! This file belongs to ${item.contributor.name}.`, `মেজ ধরে ফেলেছে! এটা ${item.contributor.name}-এর ফাইল।`)
+              : reveal("mysteryReveal", `This file belongs to ${item.contributor.name}!`, `এটা ${item.contributor.name}-এর ফাইল!`),
           },
         );
       }

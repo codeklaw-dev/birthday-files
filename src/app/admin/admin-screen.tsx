@@ -2,12 +2,13 @@
 
 import { Check, EyeOff, ExternalLink, Minus, Plus, RotateCcw, UserX } from "lucide-react";
 import { useState } from "react";
-import { Button, cx, Field, HostLine, Logo, StatusDot } from "@/components/ui";
+import { Button, cx, Field, Logo, StatusDot } from "@/components/ui";
+import { HostLine } from "@/components/host-line";
 import { useNow, useStored } from "@/lib/client/hooks";
 import { useRoom, type RoomConnection } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
 import { GamesControl, JudgeLink, ScoresPanel, useSetup, WheelControl } from "./games-panel";
-import { HostControls, HostStatus, HostWriter, PushToTalk } from "./host-panel";
+import { HostControls, HostStatus, HostWriter, PushToTalk, SurpriseControl } from "./host-panel";
 import type { HostAction, Phase, RoomView } from "@/lib/game/types";
 import type { GamesHostAction } from "@/lib/games/actions";
 
@@ -63,6 +64,7 @@ const PHASE_LABEL: Record<Phase, string> = {
   game: "Game on",
   wheel: "Prize wheel",
   boards: "Leaderboards",
+  surprise: "Surprise!",
 };
 
 function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void }) {
@@ -85,6 +87,9 @@ function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void })
         </div>
         <div className="flex items-center gap-3">
           <StatusDot status={status} />
+          <a href="/admin/host" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-semibold hover:bg-white/10">
+            AI host setup
+          </a>
           <a href="/admin/submissions" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-semibold hover:bg-white/10">
             Guest submissions
           </a>
@@ -111,7 +116,8 @@ function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void })
             <HostControls view={view} act={act} />
             <HostWriter act={act} hostKey={hostKey} />
             <JudgeLink hostKey={hostKey} />
-            <PushToTalk hostKey={hostKey} />
+            <SurpriseControl view={view} act={act as never} hostKey={hostKey} />
+            <PushToTalk hostKey={hostKey} act={act as never} />
             <Players view={view} act={act} />
             <HostStatus hostKey={hostKey} />
             <Roadmap />
@@ -229,7 +235,7 @@ function NowShowing({ view }: { view: RoomView }) {
       ) : (
         <p className="mb-4 text-sm text-haze">{PHASE_LABEL[view.phase]} screen is showing.</p>
       )}
-      <HostLine host={view.host} />
+      <HostLine host={view.host} name={view.hostName} />
     </Card>
   );
 }

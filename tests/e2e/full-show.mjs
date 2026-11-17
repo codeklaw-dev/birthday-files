@@ -60,6 +60,12 @@ function startServer(port, env) {
   };
 }
 
+/** The TV plays approved narration only: approve every recorded clip, as the organiser would after listening. */
+async function approveNarration(base) {
+  const r = await fetch(`${base}/api/host/narration/review`, { method: "PATCH", headers: { "Content-Type": "application/json", "x-host-key": KEY }, body: JSON.stringify({ approveAll: true }) });
+  if (!r.ok) throw new Error("could not approve narration");
+}
+
 const status = async (base) => (await fetch(`${base}/api/host/status`, { headers: { "x-host-key": KEY } })).json();
 async function waitPlayback(base, pred, label, timeout = 20000) {
   const end = Date.now() + timeout;
@@ -98,8 +104,9 @@ async function openShow(browser, base, phones) {
 
 async function runA(browser) {
   const base = "http://localhost:3401";
-  const server = startServer(3401, { ...MOCKS, HOST_ALLOW_MOCK_AUDIO: "1", ROOM_PERSIST: "off", TTS_CACHE_DIR: mkdtempSync(path.join(tmpdir(), "bf-tts-")) });
+  const server = startServer(3401, { ...MOCKS, HOST_ALLOW_MOCK_AUDIO: "1", ROOM_PERSIST: "off", TTS_CACHE_DIR: mkdtempSync(path.join(tmpdir(), "bf-tts-")), HOST_DATA_DIR: mkdtempSync(path.join(tmpdir(), "bf-hostdata-")) });
   await server.ready();
+  await approveNarration(base);
   try {
     const { tv, admin, players } = await openShow(browser, base, ["Rafi", "Tania"]);
     await tv.waitForSelector("text=turn on the host");
@@ -158,9 +165,10 @@ async function runA(browser) {
     await admin.mouse.down();
     await sleep(1600);
     await admin.mouse.up();
-    await admin.waitForSelector("text=Heard", { timeout: 15000 });
-    const timing = await admin.locator("text=/total \\d+ ms/").innerText();
-    ok(true, `push-to-talk: mic → STT → LLM reply (${timing.trim()})`);
+    await admin.waitForSelector("text=spoken on TV", { timeout: 15000 });
+    const heard = await admin.locator('textarea[aria-label="Transcript"]').inputValue();
+    const timing = await admin.locator("text=/spoken on TV/").innerText();
+    ok(heard.length > 0, `push-to-talk: mic → STT ("${heard}") → LLM reply (${timing.trim()})`);
     await tv.waitForSelector("text=mock AI");
     ok(true, "conversation reply is spoken on the TV");
     await admin.screenshot({ path: `${SHOTS}/admin-host-panel.png`, fullPage: true });
@@ -187,9 +195,10 @@ async function runA(browser) {
 async function runB(browser) {
   const base = "http://localhost:3402";
   const dataDir = mkdtempSync(path.join(tmpdir(), "bf-room-"));
-  const env = { ...MOCKS, ROOM_DATA_DIR: dataDir, HOST_TTS_CHAIN: "mock-fail", HOST_NO_MOCK: "1", TTS_CACHE_DIR: mkdtempSync(path.join(tmpdir(), "bf-tts-")) };
+  const env = { ...MOCKS, ROOM_DATA_DIR: dataDir, HOST_TTS_CHAIN: "mock-fail", HOST_NO_MOCK: "1", TTS_CACHE_DIR: mkdtempSync(path.join(tmpdir(), "bf-tts-")), HOST_DATA_DIR: mkdtempSync(path.join(tmpdir(), "bf-hostdata-")) };
   let server = startServer(3402, env);
   await server.ready();
+  await approveNarration(base);
   const { tv, admin, players } = await openShow(browser, base, ["Nadia"]);
   await tv.click("text=turn on the host");
   await admin.click("text=Start the show");

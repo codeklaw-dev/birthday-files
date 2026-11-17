@@ -1,4 +1,4 @@
-import { contributorSubject, err, letter, line, ok, shuffle, type GameModule, type GCtx, type Env } from "./common";
+import { clip, reveal, contributorSubject, err, letter, line, ok, shuffle, type GameModule, type GCtx, type Env } from "./common";
 import type { Award, Step, WkmbContent, WkmbGame } from "./types";
 
 /**
@@ -15,7 +15,7 @@ export function startWkmb(content: WkmbContent, ctx: GCtx): Step<WkmbGame> {
   return ok(
     { id: "wkmb", roundId: ctx.newId(), step: "answers", stepEndsAt: null, startedAt: ctx.now, index: 0, questions, stars: {} },
     {
-      line: line("wkmb", `Who Knows Mez Best! Here's what you all said. Mez, judge them.`, `কে মেজকে সবচেয়ে ভালো চেনে! এই হলো আপনাদের উত্তর। মেজ, বিচার করো।`, true),
+      line: clip("game_wkmb_intro"),
       audit: `Who Knows Mez Best started: ${questions.length} questions, ${questions.reduce((n, q) => n + q.answers.length, 0)} anonymous answers`,
     },
   );
@@ -27,7 +27,7 @@ export const wkmb: GameModule<WkmbGame, WkmbView> = {
   advance(g, ctx) {
     if (g.step === "answers") return err("Waiting for Mez to lock the scores on the judge phone.");
     if (g.step === "scored") {
-      return ok({ ...g, step: "revealed" }, { line: line("wkmbReveal", "The moment of truth: who wrote what?", "সত্যের মুহূর্ত: কে কী লিখেছেন?") });
+      return ok({ ...g, step: "revealed" }, { line: reveal("wkmbReveal", "The moment of truth: who wrote what?", "সত্যের মুহূর্ত: কে কী লিখেছেন?") });
     }
     if (g.index + 1 >= g.questions.length) return ok(g, { end: true });
     const q = g.questions[g.index + 1];

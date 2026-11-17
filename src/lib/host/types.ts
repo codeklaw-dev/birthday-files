@@ -36,6 +36,10 @@ export interface HostState {
   stopId: string | null;
   /** Counts utterances; drives auto-language alternation and quip rotation. */
   count: number;
+  /** TV playback: 0–1 volume, mute everything (voice + effects), show subtitles. */
+  volume: number;
+  muted: boolean;
+  subtitles: boolean;
 }
 
 export type HostView = Omit<HostState, "recent" | "count">;

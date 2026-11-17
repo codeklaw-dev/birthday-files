@@ -3,10 +3,11 @@
 import QRCode from "qrcode";
 import { useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
-import { cx, HostLine, Leaderboard, Logo, StatusDot, TILE } from "@/components/ui";
+import { cx, Leaderboard, Logo, StatusDot, TILE } from "@/components/ui";
+import { HostLine } from "@/components/host-line";
 import { useNow } from "@/lib/client/hooks";
 import { useHostAudio } from "@/lib/host/client/use-host-audio";
-import { BoardsScene, GameStage, useGameCues, WheelScene } from "./game-stage";
+import { BoardsScene, GameStage, SurpriseScene, useGameCues, WheelScene } from "./game-stage";
 import { useRoom } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
 import type { RoomView } from "@/lib/game/types";
@@ -71,6 +72,8 @@ export function DisplayScreen() {
           <WheelScene view={view} sfx={audio.sfx} />
         ) : view.phase === "boards" ? (
           <BoardsScene view={view} />
+        ) : view.phase === "surprise" && view.surprise ? (
+          <SurpriseScene view={view} />
         ) : view.phase === "cake" ? (
           <Cake view={view} />
         ) : (
@@ -78,9 +81,9 @@ export function DisplayScreen() {
         )}
       </section>
 
-      {view && (
+      {view && view.host.subtitles && (
         <footer className="border-t border-white/10 bg-ink-950/70 px-6 py-4 lg:px-10">
-          <HostLine host={view.host} speaking={!!audio.speaking} big />
+          <HostLine host={view.host} name={view.hostName} speaking={!!audio.speaking} big />
         </footer>
       )}
 

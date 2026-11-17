@@ -31,6 +31,7 @@ npm run party        # builds, then serves on 0.0.0.0:3000
 | `/invite` | Shared link | Invitation for Mez's 24th: RSVP, questions, memory, accusation, photo and video, private edit link |
 | `/admin/submissions` | Laptop, private | Review RSVPs and uploads: approve, tag, order, honourable mentions |
 | `/judge` | Mez's phone, private | Judge controls: stars, verdicts, mystery guesses, bonus, hug-prize switch (open via the link/QR on `/admin`) |
+| `/admin/host` | Laptop, private | AI host: personality, guest facts, surprise announcements, narration review |
 | `/admin/games` | Laptop, private | Approve survey boards, choose trial charges, edit the points rules |
 | `/hub` | Organiser | Links to every screen (the bare address `/` sends guests to `/invite`) |
 
@@ -71,6 +72,8 @@ npm run host:check           # tests EN + Bangla speech, transcription, commenta
 npm run narration:render     # pre-records the host's lines into public/narration/
 ```
 
+Then approve the clips in `/admin/host`: the TV only plays approved narration.
+
 Without keys everything still runs: recorded placeholder clips, a beeping mock voice for live lines, and mock commentary.
 
 ## Checks
@@ -80,10 +83,12 @@ npm run check        # lint + typecheck + unit tests + production build
 node tests/e2e/full-show.mjs   # game show in real browsers (needs Playwright + Chromium; build first)
 node tests/e2e/invite.mjs      # invite + moderation in real browsers (also needs ffmpeg)
 node tests/e2e/games.mjs       # all five games, judge phone, boards and prize wheel (needs ffmpeg)
+node tests/e2e/offline.mjs     # the whole show with every cloud service down
 ```
 
 ## Docs
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it fits together and and how the AI host works
+- [docs/AI_HOST.md](docs/AI_HOST.md) — the AI host's three modes, guardrails, latency, costs, configuration and demo steps
 - [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) — cloud AI provider comparison, costs and set-up
 - [docs/MILESTONES.md](docs/MILESTONES.md) — what is done, what is next
