@@ -58,6 +58,9 @@ const PHASE_LABEL: Record<Phase, string> = {
   messages: "Message wall",
   cake: "Cake ceremony",
   finished: "Finale",
+  game: "Game on",
+  wheel: "Prize wheel",
+  boards: "Leaderboards",
 };
 
 function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void }) {

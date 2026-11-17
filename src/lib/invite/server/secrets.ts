@@ -51,6 +51,16 @@ export function signedMediaUrl(mediaId: string, ttlMs = 15 * 60_000, now = Date.
   return `/api/invite/media/file/${mediaId}?exp=${exp}&sig=${sign(`${mediaId}.${exp}`)}`;
 }
 
+/**
+ * Signed link whose expiry only changes once an hour, so a screen re-rendering
+ * every second doesn't keep reloading the same photo or restart a video.
+ */
+export function signedMediaUrlStable(mediaId: string, now = Date.now()): string {
+  const hour = 3600_000;
+  const exp = Math.ceil(now / hour) * hour + hour;
+  return signedMediaUrl(mediaId, exp - now, now);
+}
+
 export function verifyMediaSignature(mediaId: string, exp: string | null, sig: string | null, now = Date.now()): boolean {
   if (!exp || !sig || !/^\d{1,12}$/.test(exp)) return false;
   if (Number(exp) * 1000 < now) return false;

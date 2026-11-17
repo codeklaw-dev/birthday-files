@@ -1,7 +1,16 @@
 import type { NextRequest } from "next/server";
 import { viewFor } from "@/lib/game/engine";
 import type { Role, RoomState } from "@/lib/game/types";
-import { isHostKey, lanHosts, roomStore } from "@/lib/server/room-store";
+import type { RoomView } from "@/lib/game/types";
+import { signedMediaUrlStable } from "@/lib/invite/server/secrets";
+import { isHostKey, isJudgeKey, lanHosts, roomStore } from "@/lib/server/room-store";
+
+/** Screens that show exhibits get short-lived signed links; phones don't need them. */
+function withMedia(view: RoomView): RoomView {
+  const g = view.games.game;
+  if (view.role === "player" || g?.id !== "mystery" || !g.exhibit.mediaId) return view;
+  return { ...view, games: { ...view.games, game: { ...g, exhibit: { ...g.exhibit, mediaUrl: signedMediaUrlStable(g.exhibit.mediaId) } } } };
+}
 
 /** Server-Sent Events: pushes a role-filtered view on every state change. */
 export async function GET(req: NextRequest) {
@@ -9,11 +18,14 @@ export async function GET(req: NextRequest) {
   const role = params.get("role") as Role | null;
   const token = params.get("token");
 
-  if (role !== "host" && role !== "display" && role !== "player") {
+  if (role !== "host" && role !== "display" && role !== "player" && role !== "judge") {
     return Response.json({ error: "Unknown role." }, { status: 400 });
   }
   if (role === "host" && !isHostKey(params.get("key"))) {
     return Response.json({ error: "Wrong host key." }, { status: 401 });
+  }
+  if (role === "judge" && !isJudgeKey(params.get("key"))) {
+    return Response.json({ error: "Not the judge phone." }, { status: 401 });
   }
 
   const encoder = new TextEncoder();
@@ -23,7 +35,9 @@ export async function GET(req: NextRequest) {
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       const send = (state: RoomState) => {
-        const view = { ...viewFor(state, role, role === "player" ? token : null, Date.now()), lanHosts: hosts };
+        // A rotated judge key signs the old judge phone out.
+        if (role === "judge" && !isJudgeKey(params.get("key"))) return cleanup();
+        const view = withMedia({ ...viewFor(state, role, role === "player" ? token : null, Date.now()), lanHosts: hosts });
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(view)}\n\n`));
         } catch {

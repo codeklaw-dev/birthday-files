@@ -1,3 +1,6 @@
+import type { GamesAction } from "@/lib/games/actions";
+import type { GamesSlice } from "@/lib/games/types";
+import type { GamesView } from "@/lib/games/views";
 import type { HostLangMode, HostState, HostView, SfxKind, SpokenLang, UtteranceSource } from "@/lib/host/types";
 
 /**
@@ -13,7 +16,10 @@ export type Phase =
   | "leaderboard"
   | "messages"
   | "cake"
-  | "finished";
+  | "finished"
+  | "game"
+  | "wheel"
+  | "boards";
 
 export type Lang = "en" | "bn";
 export type Bilingual = Record<Lang, string>;
@@ -51,15 +57,8 @@ export interface GuestMessage {
   createdAt: number;
 }
 
-export interface ScoreEvent {
-  playerId: string;
-  delta: number;
-  reason: string;
-  at: number;
-}
-
 /** Full authoritative state. Lives on the server only. */
-export interface RoomState {
+export interface RoomState extends GamesSlice {
   code: string;
   phase: Phase;
   players: Player[];
@@ -74,14 +73,13 @@ export interface RoomState {
   /** Points awarded for the current question, keyed by public player id. */
   lastGains: Record<string, number>;
   messages: GuestMessage[];
-  scoreLog: ScoreEvent[];
   cake: { candles: number; blows: number; perCandle: number };
   host: HostState;
   /** Monotonic revision, bumped on every change. */
   rev: number;
 }
 
-export type Role = "host" | "display" | "player";
+export type Role = "host" | "display" | "player" | "judge";
 
 /** What a given client is allowed to see. */
 export interface RoomView {
@@ -113,6 +111,7 @@ export interface RoomView {
   messages: GuestMessage[];
   cake: { candles: number; lit: number };
   host: HostView;
+  games: GamesView;
   /** LAN hints so the display can render a QR code phones can reach. */
   lanHosts?: string[];
 }
@@ -148,7 +147,7 @@ export type HostAction =
 /** Fired by the server timer, never accepted from clients. */
 export type SystemAction = { type: "system/timeUp"; questionId: string };
 
-export type Action = PlayerAction | HostAction | SystemAction;
+export type Action = PlayerAction | HostAction | SystemAction | GamesAction;
 
 export type ActionResult =
   | { ok: true; state: RoomState }

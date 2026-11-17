@@ -1,6 +1,9 @@
 import { availableLang, customLine, hostView, initialHost, speak } from "@/lib/host/host-state";
 import { CLIP_KEYS, LINES, type ClipKey } from "@/lib/host/script";
 import { SFX_KINDS, type HostState, type Line } from "@/lib/host/types";
+import type { GamesAction } from "@/lib/games/actions";
+import { appendAwards, applyGamesAction, correction, freshGames, gamesView, isGamesAction, syncPlayerScores } from "@/lib/games/engine-games";
+import { boardTotals } from "@/lib/games/ledger";
 import { MOCK_QUESTIONS } from "./mock-data";
 import type {
   Action,
@@ -32,9 +35,11 @@ export const LIMITS = {
 export interface EngineCtx {
   now: number;
   newId: () => string;
+  /** Uniform in [0, 1); crypto-backed on the server. Defaults to Math.random. */
+  random?: () => number;
 }
 
-export function createRoom(code = "MEZ26", now = 0): RoomState {
+export function createRoom(code = "MEZ26", now = 0, judgeKey = ""): RoomState {
   return {
     code,
     phase: "lobby",
@@ -47,7 +52,7 @@ export function createRoom(code = "MEZ26", now = 0): RoomState {
     answers: {},
     lastGains: {},
     messages: [],
-    scoreLog: [],
+    ...freshGames(judgeKey),
     cake: { candles: LIMITS.candles, blows: 0, perCandle: 3 },
     host: initialHost("u0", now),
     rev: 0,
@@ -102,18 +107,22 @@ function reveal(state: RoomState, ctx: EngineCtx): ActionResult {
     correct++;
     if (!fastest || a.at < fastest.at) fastest = { id: playerId, at: a.at };
     const left = Math.min(1, Math.max(0, 1 - (a.at - started) / window));
-    gains[playerId] = LIMITS.basePoints + Math.round(LIMITS.speedBonus * left);
+    gains[playerId] = state.points.quizCorrect + Math.round(state.points.quizSpeedMax * left);
   }
+  const scored = appendAwards(
+    state,
+    Object.entries(gains).flatMap(([playerId, delta]) => {
+      const p = state.players.find((x) => x.id === playerId);
+      return p ? [{ board: "live" as const, subject: { kind: "player" as const, id: p.id, name: p.name }, delta, rule: "quizCorrect" as const, note: `Quiz ${q.id}: correct (incl. speed)` }] : [];
+    }),
+    ctx,
+    "quiz",
+  );
   return ok({
-    ...state,
+    ...scored,
     phase: "reveal",
     questionEndsAt: null,
     lastGains: gains,
-    players: state.players.map((p) => (gains[p.id] ? { ...p, score: p.score + gains[p.id] } : p)),
-    scoreLog: [
-      ...state.scoreLog,
-      ...Object.entries(gains).map(([playerId, delta]) => ({ playerId, delta, reason: `quiz:${q.id}`, at: now })),
-    ],
     host: say(
       state,
       LINES.reveal(correct, Object.keys(state.answers).length, state.players.find((p) => p.id === fastest?.id)?.name ?? null),
@@ -124,6 +133,7 @@ function reveal(state: RoomState, ctx: EngineCtx): ActionResult {
 
 export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): ActionResult {
   const { now } = ctx;
+  if (isGamesAction(action.type)) return applyGamesAction(state, action as GamesAction, ctx);
   switch (action.type) {
     case "join": {
       const token = clean(action.token, 64);
@@ -182,10 +192,12 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
     }
 
     case "host/start":
+      if (state.game) return fail("Finish the current game first.");
       if (state.phase !== "lobby") return fail("The game has already started.");
       return startQuestion(state, 0, ctx);
 
     case "host/next":
+      if (state.game) return fail("Finish the current game first.");
       if (state.phase === "question") return fail("Reveal the current question first.");
       return startQuestion(state, state.questionIndex + 1, ctx);
 
@@ -199,6 +211,7 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
     }
 
     case "host/showLeaderboard":
+      if (state.game) return fail("Finish or stop the current game first.");
       if (state.phase === "question") return fail("Reveal the current question first.");
       return ok({
         ...state,
@@ -207,10 +220,12 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       });
 
     case "host/showMessages":
+      if (state.game) return fail("Finish or stop the current game first.");
       if (state.phase === "question") return fail("Reveal the current question first.");
       return ok({ ...state, phase: "messages", host: say(state, LINES.messages(), ctx) });
 
     case "host/startCake":
+      if (state.game) return fail("Finish or stop the current game first.");
       if (state.phase === "question") return fail("Reveal the current question first.");
       return ok({
         ...state,
@@ -220,6 +235,7 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       });
 
     case "host/finish":
+      if (state.game) return fail("Finish or stop the current game first.");
       return ok({
         ...state,
         phase: "finished",
@@ -228,14 +244,26 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       });
 
     case "host/reset": {
-      // Keep guests and their messages; clear scores and progress.
-      const fresh = createRoom(state.code, now);
+      // Keep guests, messages and the score history; zero every total with
+      // visible "reset" entries (the ledger is append-only), clear progress.
+      const fresh = createRoom(state.code, now, state.judgeKey);
+      const zeroing = (["live", "expert"] as const).flatMap((board) =>
+        [...boardTotals(state.ledger, board).values()]
+          .filter((r) => r.total !== 0)
+          .map((r) => ({ id: ctx.newId(), board, subject: r.subject, delta: -r.total, rule: "correction", note: "Reset by host", source: "host" as const, by: "host" as const, at: now })),
+      );
+      const ledger = [...state.ledger, ...zeroing];
       return ok({
         ...fresh,
         rev: state.rev,
         tokens: state.tokens,
-        players: state.players.map((p) => ({ ...p, score: 0 })),
+        players: syncPlayerScores(state.players, ledger),
         messages: state.messages,
+        ledger,
+        audit: [...state.audit, { id: ctx.newId(), at: now, by: "host" as const, text: "Game reset: scores zeroed, progress cleared" }],
+        points: state.points,
+        setup: state.setup,
+        wheel: { ...state.wheel, current: null },
         host: say(
           { ...state, host: { ...fresh.host, mode: state.host.mode, voice: state.host.voice, autoQuips: state.host.autoQuips, count: state.host.count, recent: state.host.recent } },
           LINES.lobby(),
@@ -247,17 +275,15 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
     case "host/award": {
       const delta = Math.trunc(Number(action.delta));
       if (!Number.isFinite(delta) || delta === 0 || Math.abs(delta) > LIMITS.maxAward) return fail("Invalid points.");
-      if (!state.players.some((p) => p.id === action.playerId)) return fail("Unknown player.");
-      return ok({
-        ...state,
-        players: state.players.map((p) =>
-          p.id === action.playerId ? { ...p, score: Math.max(0, p.score + delta) } : p,
-        ),
-        scoreLog: [
-          ...state.scoreLog,
-          { playerId: action.playerId, delta, reason: clean(action.reason, 60) || "host award", at: now },
-        ],
-      });
+      const p = state.players.find((x) => x.id === action.playerId);
+      if (!p) return fail("Unknown player.");
+      const current = p.score;
+      if (current + delta < 0 && current === 0) return ok(state); // already at zero
+      return correction(
+        state,
+        { board: "live", subject: { kind: "player", id: p.id, name: p.name }, delta, reason: clean(action.reason, 60) || "Host adjustment", by: "host", max: LIMITS.maxAward },
+        ctx,
+      );
     }
 
     case "host/kick": {
@@ -360,5 +386,6 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
     messages: role === "host" ? state.messages : state.messages.filter((m) => m.status === "approved"),
     cake: { candles: state.cake.candles, lit: candlesLit(state.cake) },
     host: hostView(state.host),
+    games: gamesView(state, { role, playerId: me?.id ?? null }),
   };
 }

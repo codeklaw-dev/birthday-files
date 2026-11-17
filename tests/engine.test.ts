@@ -53,7 +53,8 @@ describe("quiz round", () => {
     const bob = s.players.find((p) => p.id === idOf(s, "token-bobby"))!;
     expect(alice.score).toBe(LIMITS.basePoints + LIMITS.speedBonus);
     expect(bob.score).toBe(0);
-    expect(s.scoreLog).toHaveLength(1);
+    expect(s.ledger).toHaveLength(1);
+    expect(s.ledger[0]).toMatchObject({ board: "live", rule: "quizCorrect", delta: LIMITS.basePoints + LIMITS.speedBonus });
   });
 
   it("gives a slower correct answer fewer points and refuses late ones", () => {
