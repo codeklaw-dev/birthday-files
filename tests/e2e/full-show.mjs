@@ -167,7 +167,7 @@ async function runA(browser) {
 
     // Auto quips after a reveal.
     await admin.click('[role=switch]:has-text("Auto quips")');
-    await admin.click('button:has-text("Show leaderboard")');
+    await admin.click('button:text-is("Show leaderboard")');
     await admin.click('button:has-text("Next question")');
     await admin.click('button:has-text("Reveal answer")');
     await tv.waitForFunction(() => document.body.innerText.match(/fabulous|embarrassed|remember Mez|recount|forever|main character/), null, { timeout: 10000 });
@@ -195,7 +195,7 @@ async function runB(browser) {
   await admin.click("text=Start the show");
   await players[0].click('button:has-text("Pizza")');
   await admin.click('button:has-text("Reveal answer")');
-  await admin.click('button:has-text("Show leaderboard")');
+  await admin.click('button:text-is("Show leaderboard")');
   const fb = await waitPlayback(base, (p) => p.via === "fallback-clip", "fallback clip for dynamic line");
   ok(true, `cloud TTS down → dynamic line fell back to a recorded clip (${fb.latencyMs} ms)`);
   const st = await status(base);

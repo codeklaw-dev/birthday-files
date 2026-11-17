@@ -65,9 +65,21 @@ The party is on **21 November 2026**. Re-planned on 16 November around the new r
 - [ ] Fill in the real time and venue in `src/lib/event.ts`
 - [ ] **Hosting decision:** guests need to reach the invite before the party (see README → "Sharing the invite")
 
+## Phase 3, Milestone 7 — The birthday games ✅
+
+- [x] Shared server-authoritative game framework (steps, timers, one action per person, per-viewer views)
+- [x] Mez Imposter, Who Knows Mez Best, Mez Survey (server grouping + host approval), Mez on Trial, Mystery Files
+- [x] Two leaderboards (Mez Expert, Live Games Champion) from an append-only ledger; configurable points; audited corrections; judge's bonus
+- [x] Mez's judge phone (`/judge`) with stars, lock, plea, rest case, mystery guess, bonus, hug-prize switch
+- [x] Prize wheel with eligibility rules, decline, remote-safe prizes, hugs only when Mez allows, crypto randomness with logged draws
+- [x] TV kit: scene transitions, timers, stamps, vote bars, reveal cards, wheel, sound cues; host round controls (+15 s, end timer, stop)
+- [x] Tests: 25 engine + 9 route tests (privacy, duplicate votes, score integrity, reconnects, permissions, injection, fairness); 27-check browser run of every game
+- [ ] Rehearse each game once with real guests' submissions (timings, wording, Bangla lines)
+- [ ] Decide the order of games for the night and the prize wheel moments
+
 ## After the party is safe (not scheduled)
 
-- Supabase + Vercel hosting; Mez Survey, Mez on Trial, Mez Imposter, Mystery Files (fed by the submissions); prizes and surprise reveals.
+- Supabase + Vercel hosting; surprise reveals; a printable "results" page for Mez.
 
 ## Suggested order for the next five days
 

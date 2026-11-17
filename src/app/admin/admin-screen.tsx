@@ -6,8 +6,10 @@ import { Button, cx, Field, HostLine, Logo, StatusDot } from "@/components/ui";
 import { useNow, useStored } from "@/lib/client/hooks";
 import { useRoom, type RoomConnection } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
+import { GamesControl, JudgeLink, ScoresPanel, useSetup, WheelControl } from "./games-panel";
 import { HostControls, HostStatus, HostWriter, PushToTalk } from "./host-panel";
 import type { HostAction, Phase, RoomView } from "@/lib/game/types";
+import type { GamesHostAction } from "@/lib/games/actions";
 
 export function AdminScreen() {
   const [hostKey, setHostKey] = useStored("session", "bf.hostKey");
@@ -66,9 +68,10 @@ const PHASE_LABEL: Record<Phase, string> = {
 function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void }) {
   const room = useRoom("host", { hostKey });
   const { view, status } = room;
+  const { setup } = useSetup(hostKey);
   const [error, setError] = useState<string | null>(null);
 
-  const act = async (action: HostAction) => {
+  const act = async (action: HostAction | GamesHostAction) => {
     const res = await room.send(action);
     setError(res.ok ? null : (res.error ?? "Action failed."));
   };
@@ -98,12 +101,16 @@ function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void })
         <div className="grid flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:p-8">
           <div className="flex min-w-0 flex-col gap-4">
             <RunOfShow view={view} act={act} error={error} room={room} />
+            <GamesControl view={view} act={act as never} setup={setup} />
+            <WheelControl view={view} act={act as never} />
+            <ScoresPanel view={view} act={act as never} setup={setup} />
             <NowShowing view={view} />
             <Messages view={view} act={act} />
           </div>
           <div className="flex min-w-0 flex-col gap-4">
             <HostControls view={view} act={act} />
             <HostWriter act={act} hostKey={hostKey} />
+            <JudgeLink hostKey={hostKey} />
             <PushToTalk hostKey={hostKey} />
             <Players view={view} act={act} />
             <HostStatus hostKey={hostKey} />

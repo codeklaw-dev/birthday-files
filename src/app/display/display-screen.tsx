@@ -6,6 +6,7 @@ import { Volume2, VolumeX } from "lucide-react";
 import { cx, HostLine, Leaderboard, Logo, StatusDot, TILE } from "@/components/ui";
 import { useNow } from "@/lib/client/hooks";
 import { useHostAudio } from "@/lib/host/client/use-host-audio";
+import { BoardsScene, GameStage, useGameCues, WheelScene } from "./game-stage";
 import { useRoom } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
 import type { RoomView } from "@/lib/game/types";
@@ -26,6 +27,7 @@ export function DisplayScreen() {
   const joinUrl = joinUrlFor(view);
 
   const audio = useHostAudio(view);
+  useGameCues(view, clockOffset, audio.sfx);
 
   return (
     <main className="stage flex h-dvh flex-col overflow-hidden">
@@ -63,6 +65,12 @@ export function DisplayScreen() {
           <Board title="Standings" view={view} />
         ) : view.phase === "messages" ? (
           <MessageWall view={view} />
+        ) : view.phase === "game" && view.games.game ? (
+          <GameStage view={view} clockOffset={clockOffset} sfx={audio.sfx} />
+        ) : view.phase === "wheel" ? (
+          <WheelScene view={view} sfx={audio.sfx} />
+        ) : view.phase === "boards" ? (
+          <BoardsScene view={view} />
         ) : view.phase === "cake" ? (
           <Cake view={view} />
         ) : (

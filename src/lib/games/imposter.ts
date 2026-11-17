@@ -1,5 +1,5 @@
 import { IMPOSTER, timerMs } from "./config";
-import { clean, err, line, nameOf, ok, playerSubject, shuffle, type Actor, type Env, type GameModule, type GCtx, type GameAction, type Viewer } from "./common";
+import { clean, err, line, nameOf, ok, playerSubject, shuffle, type Actor, type Env, type GameModule, type GCtx, type GameAction } from "./common";
 import { similar } from "./text";
 import type { Award, ImposterGame, Step } from "./types";
 

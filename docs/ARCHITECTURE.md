@@ -122,13 +122,44 @@ Storage (`src/lib/invite/server/store.ts`) is one JSON file plus a media folder 
 
 **Moderation.** pending → approved / rejected, plus tags, honourable mention and a private note. The party's *running order* contains only approved submissions whose guest ticked permission. A guest edit after review sends the submission back to pending ("edited since review"). Withdrawing deletes the record and its files.
 
+## Birthday games
+
+Five games share one server-authoritative framework (`src/lib/games/`). Each game is a small, pure state machine (`imposter.ts`, `wkmb.ts`, `survey.ts`, `trial.ts`, `mystery.ts`) with the same shape:
+
+- **Steps and timers** live on the server. `room-store.ts` fires `system/gameTimeUp` with the round id and step, so a stale timer can never move a later round.
+- **Actions** are checked for role, step and one-per-person (votes, clues and guesses can't be changed or repeated).
+- **Views** are computed per viewer (`view(game, {role, playerId})`), so a phone only receives what that phone may know.
+- **Scoring** happens once, on the step that reveals the result, as a list of awards with the rule that produced each.
+
+| Game | Content (server-built) | Who acts | Board |
+| --- | --- | --- | --- |
+| Mez Imposter | Random word from `config.ts` | Phones: clue, vote, imposter's one word guess | Live |
+| Who Knows Mez Best | The 3 invite answers of each approved, consented guest (attending or remote) | Mez's judge phone: 0–3 stars, then lock | Mez Expert |
+| Mez Survey | Boards the host approved in `/admin/games` (server groups answers; counts recomputed server-side) | Phones guess; host may accept a near-miss (logged) | Live |
+| Mez on Trial | Approved accusations (host picks which) | Mez: plea and "rest my case"; phones: jury | Live (jury majority) + Mez Expert (accuser, if guilty) |
+| Mystery Files | Approved photos, videos and memories, anonymised | Mez and phones guess the contributor | Live |
+
+**Who sees what.** Secret words and imposter identities never reach the TV, the host or other phones before the reveal. Who Knows Mez Best authors stay hidden from everyone, Mez included, until Mez locks the scores. Accusers are named only with the verdict. Mez's mystery guess is shown on the TV only as "Mez has made a call". The host sees the full survey board only after guessing closes. Exhibit photos and videos reach the TV and judge as signed links that change once an hour, and never reach phones.
+
+**Content can't be injected.** `host/game/start` and `host/setup/survey` are rebuilt by the action route from the invite store (`games/server/content.ts`); whatever a client sends in those fields is replaced. Only submissions that are approved, consented and not "can't make it" are used.
+
+**Mez's judge phone** (`/judge#k=<key>`) authenticates with a random judge key held in the room state. The host can show it as a QR code or rotate it, which signs the old phone out at once. `judge/*` actions and the judge stream require it.
+
+**Scores: an append-only ledger.** Every point is a `LedgerEntry` (board, person, delta, rule, note, by, time). Totals are always computed from the ledger, and `player.score` is kept in sync for the older quiz UI. Corrections, the judge's bonus (positive and capped) and even "reset" are *new entries* with a reason; nothing is edited or deleted. Changing the points rules is logged and only affects later rounds. Two boards:
+- **Mez Expert**: invite contributors, attending and remote on equal terms (Who Knows Mez Best stars, upheld accusations).
+- **Live Games Champion**: phone players in live rounds (warm-up quiz, Imposter, Survey, Trial jury, Mystery guesses).
+
+**Prize wheel.** Eligibility comes from the boards (top 3 with points on either board), one spin per person, and a declined prize doesn't use it up. Remote guests only get prizes that work from afar. Hug prizes appear only after Mez switches them on from the judge phone, and anyone can decline anything. The result is drawn on the server with `crypto` randomness (`secureRandom`); the draw value, the segment list and the winning segment are written to the event log. The TV only animates to the server's result, and nobody can choose an outcome.
+
+**TV kit** (`src/components/tv.tsx`): `Scene` transitions (rise and curtain), `TimerRing`, `Counter`, `VoteBars`, `Stamp`, `RevealCard`, `PrizeWheel`, `BoardColumn`, plus `useGameCues` for sound cues on step changes and ticks in the last three seconds.
+
 ## Fairness rules in the engine
 
 - One answer per player per question; no changes after tapping.
 - Timing uses the server clock. Late answers are rejected server-side.
-- Correct answer = 100 points + up to 50 for speed. Wrong or missing = 0.
+- Correct answer = `quizCorrect` (100) + up to `quizSpeedMax` (50) for speed. Wrong or missing = 0. All game points are in `src/lib/games/config.ts` and editable in `/admin/games`.
 - Ties rank by who joined first.
-- Host bonus points are capped at ±500 per action, cannot push a score below zero, and are logged.
+- Host corrections are capped at ±500 per entry, need a reason, cannot push a total below zero, and are added to the ledger (never edits).
 - Names are trimmed, capped at 20 characters and de-duplicated.
 
 ## Known gaps in the prototype

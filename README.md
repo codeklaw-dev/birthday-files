@@ -2,7 +2,7 @@
 
 An interactive, AI-hosted birthday game show for 21 November 2026. A laptop runs the private host dashboard, a TV shows the show, and guests play from their phones.
 
-**Status:** multiplayer show plus a cloud AI host (voice in English and Bangla, AI commentary, push-to-talk) with offline fallbacks. Real voices need a free Gemini key; see [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md). No deployment yet.
+**Status:** five birthday games with two leaderboards and a prize wheel, a judge phone for Mez, a multiplayer show and a cloud AI host (voice in English and Bangla, AI commentary, push-to-talk) with offline fallbacks. Real voices need a free Gemini key; see [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md). No deployment yet.
 
 ## Run it
 
@@ -30,7 +30,22 @@ npm run party        # builds, then serves on 0.0.0.0:3000
 | `/play` | Phones | Join, answer, send messages, blow out candles |
 | `/invite` | Shared link | Invitation for Mez's 24th: RSVP, questions, memory, accusation, photo and video, private edit link |
 | `/admin/submissions` | Laptop, private | Review RSVPs and uploads: approve, tag, order, honourable mentions |
+| `/judge` | Mez's phone, private | Judge controls: stars, verdicts, mystery guesses, bonus, hug-prize switch (open via the link/QR on `/admin`) |
+| `/admin/games` | Laptop, private | Approve survey boards, choose trial charges, edit the points rules |
 | `/hub` | Organiser | Links to every screen (the bare address `/` sends guests to `/invite`) |
+
+## Preview the games
+
+1. Have a few guests submit the invite and approve them in `/admin/submissions` (games only use approved submissions whose guest allowed showing them).
+2. Open `/display` on the TV, `/admin` on the laptop, and the **judge link** from the "Mez's judge phone" card on Mez's phone. Guests join on `/play`.
+3. For Mez Survey, approve a board in `/admin/games` first.
+4. Start a game from the Games card. The big button always shows the next step. Use **+15 s / End timer now / Stop game** as needed, then **Show leaderboards** or **Prize wheel**.
+
+To rehearse quickly, run with shorter timers:
+
+```bash
+GAME_TIMER_SCALE=0.3 npm run party
+```
 
 ## Preview the invite
 
@@ -64,6 +79,7 @@ Without keys everything still runs: recorded placeholder clips, a beeping mock v
 npm run check        # lint + typecheck + unit tests + production build
 node tests/e2e/full-show.mjs   # game show in real browsers (needs Playwright + Chromium; build first)
 node tests/e2e/invite.mjs      # invite + moderation in real browsers (also needs ffmpeg)
+node tests/e2e/games.mjs       # all five games, judge phone, boards and prize wheel (needs ffmpeg)
 ```
 
 ## Docs

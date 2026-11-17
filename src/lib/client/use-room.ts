@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { HostAction, PlayerAction, Role, RoomView } from "@/lib/game/types";
+import type { Action, Role, RoomView } from "@/lib/game/types";
 
 export type ConnectionStatus = "connecting" | "live" | "reconnecting";
 
@@ -10,15 +10,18 @@ export interface RoomConnection {
   status: ConnectionStatus;
   /** Server clock minus local clock, for countdowns. */
   clockOffset: number;
-  send: (action: PlayerAction | HostAction) => Promise<{ ok: boolean; error?: string }>;
+  send: (action: Action) => Promise<{ ok: boolean; error?: string }>;
 }
 
 /**
  * The single client-side seam to the realtime backend. Screens only use this
  * hook, so swapping SSE for Supabase Realtime touches this file alone.
  */
-export function useRoom(role: Role, opts: { token?: string | null; hostKey?: string | null; enabled?: boolean } = {}): RoomConnection {
-  const { token = null, hostKey = null, enabled = true } = opts;
+export function useRoom(
+  role: Role,
+  opts: { token?: string | null; hostKey?: string | null; judgeKey?: string | null; enabled?: boolean } = {},
+): RoomConnection {
+  const { token = null, hostKey = null, judgeKey = null, enabled = true } = opts;
   const [view, setView] = useState<RoomView | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const offset = useRef(0);
@@ -29,6 +32,7 @@ export function useRoom(role: Role, opts: { token?: string | null; hostKey?: str
     const qs = new URLSearchParams({ role });
     if (token) qs.set("token", token);
     if (hostKey) qs.set("key", hostKey);
+    if (judgeKey) qs.set("key", judgeKey);
     const source = new EventSource(`/api/room/stream?${qs}`);
     source.onopen = () => setStatus("live");
     source.onerror = () => setStatus("reconnecting"); // EventSource retries by itself
@@ -42,14 +46,18 @@ export function useRoom(role: Role, opts: { token?: string | null; hostKey?: str
       setView((prev) => (prev && prev.rev > next.rev ? prev : next));
     };
     return () => source.close();
-  }, [role, token, hostKey, enabled]);
+  }, [role, token, hostKey, judgeKey, enabled]);
 
   const send = useCallback<RoomConnection["send"]>(
     async (action) => {
       try {
         const res = await fetch("/api/room/action", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...(hostKey ? { "x-host-key": hostKey } : {}) },
+          headers: {
+            "Content-Type": "application/json",
+            ...(hostKey ? { "x-host-key": hostKey } : {}),
+            ...(judgeKey ? { "x-judge-key": judgeKey } : {}),
+          },
           body: JSON.stringify(action),
         });
         const body = await res.json().catch(() => ({}));
@@ -58,7 +66,7 @@ export function useRoom(role: Role, opts: { token?: string | null; hostKey?: str
         return { ok: false, error: "Can't reach the game. Check your connection." };
       }
     },
-    [hostKey],
+    [hostKey, judgeKey],
   );
 
   return { view, status, clockOffset, send };

@@ -1,5 +1,6 @@
 import type { ActionResult, Player, RoomState } from "@/lib/game/types";
 import { speak } from "@/lib/host/host-state";
+import { LINES } from "@/lib/host/script";
 import type { GamesAction } from "./actions";
 import { DEFAULT_POINTS, POINT_KEYS, PRIZES, WHEEL_RULES, type PointsConfig, type PrizeId } from "./config";
 import { clean, line, type Actor, type Env, type GameAction, type GameModule, type GCtx, type Viewer } from "./common";
@@ -137,9 +138,15 @@ function applyStep(state: RoomState, r: ReturnType<GameModule<GameState, GameVie
   if (r.audit) next = addAudit(next, r.audit, by, ctx);
   if (r.line) next = { ...next, host: speak(next.host, r.line, ctx) };
   if (r.end) {
-    next = addAudit({ ...next, game: null, phase: "boards", host: speak(next.host, line("boards", "That's the game! Here are the leaderboards.", "খেলা শেষ! এই হলো স্কোরবোর্ড।"), ctx) }, `${GAME_NAMES[r.game.id]} finished`, by, ctx);
+    next = addAudit({ ...next, game: null, phase: "boards", host: speak(next.host, boardsLine(next), ctx) }, `${GAME_NAMES[r.game.id]} finished`, by, ctx);
   }
   return done(next);
+}
+
+/** Leaderboard line with a pre-recorded fallback, so it's still spoken if the cloud voice is down. */
+function boardsLine(state: RoomState) {
+  const leader = liveBoard(state.ledger, state.players).find((r) => r.rank === 1 && r.total > 0);
+  return LINES.leaderboard(leader?.subject.name ?? null);
 }
 
 export const GAME_NAMES: Record<GameId, string> = {
@@ -251,7 +258,7 @@ export function applyGamesAction(state: RoomState, action: GamesAction, c: Engin
     }
     case "host/showBoards":
       if (state.phase === "question") return fail("Reveal the current quiz question first.");
-      return done({ ...state, phase: "boards", host: speak(state.host, line("boards", "Here are the leaderboards.", "এই হলো স্কোরবোর্ড।"), c) });
+      return done({ ...state, phase: "boards", host: speak(state.host, boardsLine(state), c) });
 
     // ----- setup -----
     case "host/setup/survey": {

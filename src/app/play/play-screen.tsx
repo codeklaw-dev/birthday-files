@@ -6,6 +6,7 @@ import { useNow, usePlayerToken } from "@/lib/client/hooks";
 import { useRoom, type RoomConnection } from "@/lib/client/use-room";
 import { AVATARS } from "@/lib/game/mock-data";
 import type { RoomView } from "@/lib/game/types";
+import { GamePanel, WheelPanel } from "./game-panels";
 
 export function PlayScreen() {
   const token = usePlayerToken();
@@ -153,6 +154,14 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
       )}
 
       {view.phase === "cake" && <CakePad room={room} view={view} token={token} />}
+
+      {view.phase === "game" && view.games.game && <GamePanel view={view} room={room} token={token} />}
+      {view.phase === "wheel" && <WheelPanel view={view} room={room} token={token} />}
+      {view.phase === "boards" && (
+        <Section title="Leaderboards" body="Live Games Champion standings. Mez Expert is up on the TV.">
+          <Leaderboard players={view.players} meId={me.id} limit={10} />
+        </Section>
+      )}
 
       <div className="mt-auto pt-2">
         <HostLine host={view.host} />

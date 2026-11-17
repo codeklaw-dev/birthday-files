@@ -4,6 +4,8 @@ import { EVENT } from "@/lib/event";
 
 const SCREENS = [
   { href: "/admin", name: "Host dashboard", device: "Laptop · private", blurb: "Run the show, moderate messages, award points." },
+  { href: "/admin/games", name: "Games setup", device: "Laptop · private", blurb: "Approve survey boards, choose trial charges, set the points rules." },
+  { href: "/judge", name: "Mez's judge phone", device: "Mez's phone · private", blurb: "Open it from the judge link or QR on the host dashboard." },
   { href: "/admin/submissions", name: "Guest submissions", device: "Laptop · private", blurb: "RSVPs, answers, photos and videos: review and order them." },
   { href: "/display", name: "TV display", device: "TV · public", blurb: "The big screen: questions, scores and the AI host." },
   { href: "/play", name: "Phone controller", device: "Phones · guests", blurb: "Join with a name, answer, send messages, blow out candles." },
