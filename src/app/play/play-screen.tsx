@@ -105,6 +105,14 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
 
   return (
     <div className="flex flex-1 flex-col gap-5">
+      {view.show.rehearsal && (
+        <p className="rounded-lg border-2 border-dashed border-tile-b px-3 py-1.5 text-center font-mono text-xs font-bold uppercase tracking-[0.25em] text-tile-b">Rehearsal · sample data</p>
+      )}
+      {(view.show.hold || view.show.paused) && (
+        <p role="status" className="rounded-xl bg-gold px-4 py-3 text-center font-semibold text-ink-950">
+          {view.show.hold ? "Short break — back in a moment." : "Paused. Hang tight."}
+        </p>
+      )}
       <div className="panel flex items-center gap-3 px-4 py-3">
         <span className="text-2xl" aria-hidden>{me.avatar}</span>
         <div className="min-w-0 flex-1">
@@ -159,6 +167,7 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
       {view.phase === "game" && view.games.game && <GamePanel view={view} room={room} token={token} />}
       {view.phase === "wheel" && <WheelPanel view={view} room={room} token={token} />}
       {view.phase === "surprise" && <Section title="Surprise!" body="Eyes on the big screen." />}
+      {view.phase === "scene" && <Section title={view.scene?.title ?? "Showtime"} body={view.scene?.kind === "spotlight" ? "Eyes on the big screen. Who do you think sent it?" : "Eyes on the big screen."} />}
       {view.phase === "boards" && (
         <Section title="Leaderboards" body="Live Games Champion standings. Mez Expert is up on the TV.">
           <Leaderboard players={view.players} meId={me.id} limit={10} />
@@ -259,21 +268,29 @@ function AnswerPad({ room, view, token }: { room: RoomConnection; view: RoomView
 }
 
 function CakePad({ room, view, token }: { room: RoomConnection; view: RoomView; token: string }) {
-  const out = view.cake.lit === 0;
+  const { lit, candles, guestsDone, mezOut, stage } = view.cake;
+  const [error, setError] = useState<string | null>(null);
+  if (stage === "real") return <Section title="Real cake time! 🎂" body="Put the phone down and head to the cake." />;
+  if (stage === "cut") return <Section title="The cake is cut! 🔪" body="First slice goes to Mez." />;
+  const done = guestsDone || mezOut;
   return (
     <section className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-      <h1 className="font-display text-3xl font-extrabold">{out ? "Happy birthday, Mez!" : "Blow out the candles!"}</h1>
+      <h1 className="font-display text-3xl font-extrabold">{mezOut ? "Happy birthday, Mez!" : guestsDone ? "Over to Mez!" : "Blow out the candles!"}</h1>
       <button
-        disabled={out}
-        onClick={() => room.send({ type: "blow", token })}
+        disabled={done}
+        onClick={async () => {
+          const r = await room.send({ type: "blow", token });
+          setError(r.ok ? null : (r.error ?? null));
+        }}
         className="grid size-56 place-items-center rounded-full bg-gold text-7xl shadow-[0_10px_0_0_var(--color-gold-deep)] transition duration-100 active:translate-y-2 active:shadow-[0_2px_0_0_var(--color-gold-deep)] disabled:opacity-50 disabled:shadow-none"
         aria-label="Blow"
       >
-        {out ? "🎉" : "💨"}
+        {mezOut ? "🎉" : guestsDone ? "🎂" : "💨"}
       </button>
       <p className="font-mono text-sm uppercase tracking-widest text-haze" aria-live="polite">
-        {out ? "All candles out" : `${view.cake.lit} of ${view.cake.candles} candles still lit · tap fast`}
+        {mezOut ? "All 24 candles out" : guestsDone ? "The last candle is Mez's" : `${Math.max(0, lit - 1)} of ${candles - 1} candles still lit · tap fast`}
       </p>
+      {error && !done && <p className="text-sm text-stamp">{error}</p>}
     </section>
   );
 }

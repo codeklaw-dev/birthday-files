@@ -151,7 +151,7 @@ export function PrizeWheel({ segments, landOn, spinId, onSettled }: { segments: 
     return `M50 50 L${50 + r * Math.cos(a0)} ${50 + r * Math.sin(a0)} A${r} ${r} 0 ${large} 1 ${50 + r * Math.cos(a1)} ${50 + r * Math.sin(a1)} Z`;
   };
   return (
-    <div className="relative aspect-square w-full max-w-[min(62vh,40rem)]">
+    <div className="relative aspect-square w-full max-w-[min(calc(var(--tvh)*62),40rem)]">
       <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1 text-5xl text-cream drop-shadow-lg" aria-hidden>
         ▼
       </div>

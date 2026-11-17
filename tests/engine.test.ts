@@ -148,15 +148,15 @@ describe("host tools", () => {
 });
 
 describe("cake", () => {
-  it("needs the whole room to blow out every candle", () => {
+  it("needs the whole room to blow out the guests' candles", () => {
     let s = run(twoPlayers(), { type: "host/startCake" });
     expect(err(createRoom(), { type: "blow", token: "token-alice" })).toMatch(/Join/);
-    const needed = s.cake.candles * s.cake.perCandle;
+    const needed = (s.cake.candles - 1) * s.cake.perCandle;
     for (let i = 0; i < needed; i++) {
-      expect(viewFor(s, "display", null, 0).cake.lit).toBeGreaterThan(0);
+      expect(viewFor(s, "display", null, 0).cake.lit).toBeGreaterThan(1);
       s = run(s, { type: "blow", token: i % 2 ? "token-alice" : "token-bobby" });
     }
-    expect(viewFor(s, "display", null, 0).cake.lit).toBe(0);
-    expect(err(s, { type: "blow", token: "token-alice" })).toMatch(/already out/);
+    expect(viewFor(s, "display", null, 0).cake.lit).toBe(1);
+    expect(err(s, { type: "blow", token: "token-alice" })).toMatch(/Mez/);
   });
 });

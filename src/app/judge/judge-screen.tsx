@@ -73,7 +73,9 @@ function Judge({ judgeKey }: { judgeKey: string }) {
           <p className="m-auto text-haze">Connecting…</p>
         ) : (
           <>
-            {!g && <p className="panel p-5 text-center text-haze">No game running. Your controls appear here when it&apos;s your turn to judge.</p>}
+            {view.show.rehearsal && <p className="rounded-lg border-2 border-dashed border-tile-b px-3 py-1.5 text-center font-mono text-xs font-bold uppercase tracking-[0.25em] text-tile-b">Rehearsal · sample data</p>}
+            {view.phase === "cake" && <CakeControl view={view} act={act} />}
+            {!g && view.phase !== "cake" && <p className="panel p-5 text-center text-haze">No game running. Your controls appear here when it&apos;s your turn to judge.</p>}
             {g?.id === "wkmb" && <WkmbJudge g={g} act={act} />}
             {g?.id === "trial" && <TrialJudge g={g} act={act} offset={room.clockOffset} />}
             {g?.id === "mystery" && <MysteryJudge g={g} act={act} />}
@@ -96,6 +98,33 @@ function Judge({ judgeKey }: { judgeKey: string }) {
 }
 
 type Act = (a: Parameters<RoomConnection["send"]>[0]) => Promise<boolean>;
+
+/** Mez's own candle: guests blow out the other 23 from their phones. */
+function CakeControl({ view, act }: { view: RoomView; act: Act }) {
+  const { lit, candles, guestsDone, mezOut, stage } = view.cake;
+  if (stage !== "candles" || mezOut)
+    return (
+      <section className="panel p-6 text-center">
+        <div className="text-6xl" aria-hidden>🎉</div>
+        <h2 className="mt-3 font-display text-2xl font-extrabold">Happy birthday, Mez!</h2>
+        <p className="mt-1 text-haze">{stage === "real" ? "Time for the real cake." : stage === "cut" ? "The cake is cut." : "Make a wish."}</p>
+      </section>
+    );
+  return (
+    <section className="panel flex flex-col items-center gap-5 p-6 text-center">
+      <h2 className="font-display text-2xl font-extrabold">{guestsDone ? "Your candle!" : "The guests are blowing…"}</h2>
+      <p className="text-haze">{guestsDone ? "Make a wish, then blow out the last one." : `${Math.max(0, lit - 1)} of ${candles - 1} guest candles still lit. You can wait for them, or blow out everything now.`}</p>
+      <button
+        onClick={() => void act({ type: "judge/cake/blow" })}
+        className="grid size-48 place-items-center rounded-full bg-gold text-6xl shadow-[0_10px_0_0_var(--color-gold-deep)] transition duration-100 active:translate-y-2 active:shadow-[0_2px_0_0_var(--color-gold-deep)]"
+        aria-label="Blow out my candle"
+      >
+        🕯️
+      </button>
+      <p className="font-mono text-xs uppercase tracking-widest text-haze">Tap to blow</p>
+    </section>
+  );
+}
 
 function WkmbJudge({ g, act }: { g: WkmbView; act: Act }) {
   const unscored = g.answers.filter((a) => a.stars === null).length;

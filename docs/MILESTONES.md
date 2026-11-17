@@ -89,6 +89,20 @@ The party is on **21 November 2026**. Re-planned on 16 November around the new r
 - [ ] Record the last 13 placeholder clips (`npm run narration:render` after the quota resets), then review and approve all clips
 - [ ] Native speaker listens to the Bangla clips
 
+## Phase 5, Milestone 9 — Show director and birthday finale ✅
+
+- [x] Configurable running order: optional segments about every 30 minutes; the organiser starts every one by hand (no auto-advance)
+- [x] Dashboard `/admin/show`: Up next, preview-before-live (scaled 16:9, never touches the room), start / pause / resume / skip / restore / replay / end, mute, stop talking, emergency stop, manual override, live TV monitor
+- [x] Guest spotlight (anonymous → reveal; photos, memories, videos), honourable mentions (incl. remote), video-message montage
+- [x] 21 November history 2002–2024: 18 events, each with its verified source; unverified years left out; serious news off by default
+- [x] Virtual cake: 24 candles, phones blow 23, Mez's judge phone blows the last, cut animation, confetti, hand-over to the real cake
+- [x] Final leaderboard ceremony and prize announcements
+- [x] Rehearsal mode: fictional guests and sample media in separate, guarded folders; badge on every screen
+- [x] 16:9 TV stage with letterboxing; media preloading and graceful missing-file cards; offline limits documented
+- [x] Tests: 12 unit + 6 route tests; browser rehearsal (40 checks) with the TV, dashboard, Mez's phone and three phones
+- [ ] Rehearse on the real TV, Wi-Fi and phones (checklist in docs/SHOW.md)
+- [ ] Real prize wording; real start time and venue in `src/lib/event.ts`
+
 ## After the party is safe (not scheduled)
 
 - Supabase + Vercel hosting; surprise reveals; a printable "results" page for Mez.

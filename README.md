@@ -2,7 +2,7 @@
 
 An interactive, AI-hosted birthday game show for 21 November 2026. A laptop runs the private host dashboard, a TV shows the show, and guests play from their phones.
 
-**Status:** five birthday games with two leaderboards and a prize wheel, a judge phone for Mez, a multiplayer show and a cloud AI host (voice in English and Bangla, AI commentary, push-to-talk) with offline fallbacks. Real voices need a free Gemini key; see [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md). No deployment yet.
+**Status:** a show director with a manual running order, guest spotlights, 21 November history, a 24-candle virtual cake and the full finale; rehearsal mode on fictional guests; five birthday games with two leaderboards and a prize wheel, a judge phone for Mez, a multiplayer show and a cloud AI host (voice in English and Bangla, AI commentary, push-to-talk) with offline fallbacks. Real voices need a free Gemini key; see [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md). No deployment yet.
 
 ## Run it
 
@@ -25,15 +25,25 @@ npm run party        # builds, then serves on 0.0.0.0:3000
 
 | Route | Device | Purpose |
 | --- | --- | --- |
+| `/admin/show` | Laptop, private | **Show director**: running order, preview-before-live, start/pause/skip/replay, mute, emergency stop, scene and cake controls, live TV monitor |
 | `/admin` | Laptop, private | Run of show, answer key, live tallies, bonus points, message moderation, AI host voice, soundboard, commentary, push-to-talk |
-| `/display` | TV | Lobby + QR, questions, reveal, leaderboard, message wall, cake, finale, host voice and captions |
-| `/play` | Phones | Join, answer, send messages, blow out candles |
+| `/display` | TV | Fixed 16:9 stage: lobby + QR, questions, games, spotlights, history, cake, ceremony, montage, finale, host voice and captions |
+| `/play` | Phones | Join, answer, play, send messages, blow out candles |
 | `/invite` | Shared link | Invitation for Mez's 24th: RSVP, questions, memory, accusation, photo and video, private edit link |
 | `/admin/submissions` | Laptop, private | Review RSVPs and uploads: approve, tag, order, honourable mentions |
 | `/judge` | Mez's phone, private | Judge controls: stars, verdicts, mystery guesses, bonus, hug-prize switch (open via the link/QR on `/admin`) |
 | `/admin/host` | Laptop, private | AI host: personality, guest facts, surprise announcements, narration review |
 | `/admin/games` | Laptop, private | Approve survey boards, choose trial charges, edit the points rules |
 | `/hub` | Organiser | Links to every screen (the bare address `/` sends guests to `/invite`) |
+
+## Run the show / rehearse
+
+```bash
+npm run build
+npm run rehearsal    # fictional guests only, on http://localhost:3100
+```
+
+Open `/admin/show` on the laptop and `/display` on the TV. Full guide, offline limitations and the rehearsal checklist: [docs/SHOW.md](docs/SHOW.md).
 
 ## Preview the games
 
@@ -84,11 +94,13 @@ node tests/e2e/full-show.mjs   # game show in real browsers (needs Playwright + 
 node tests/e2e/invite.mjs      # invite + moderation in real browsers (also needs ffmpeg)
 node tests/e2e/games.mjs       # all five games, judge phone, boards and prize wheel (needs ffmpeg)
 node tests/e2e/offline.mjs     # the whole show with every cloud service down
+node tests/e2e/rehearsal.mjs   # show director + finale: TV, dashboard, Mez's phone, three phones
 ```
 
 ## Docs
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it fits together and and how the AI host works
+- [docs/SHOW.md](docs/SHOW.md) — show director, finale, rehearsal mode, offline limits, rehearsal checklist
 - [docs/AI_HOST.md](docs/AI_HOST.md) — the AI host's three modes, guardrails, latency, costs, configuration and demo steps
 - [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) — cloud AI provider comparison, costs and set-up
 - [docs/MILESTONES.md](docs/MILESTONES.md) — what is done, what is next

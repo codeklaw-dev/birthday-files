@@ -65,6 +65,7 @@ const PHASE_LABEL: Record<Phase, string> = {
   wheel: "Prize wheel",
   boards: "Leaderboards",
   surprise: "Surprise!",
+  scene: "Show scene",
 };
 
 function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void }) {
@@ -87,6 +88,9 @@ function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void })
         </div>
         <div className="flex items-center gap-3">
           <StatusDot status={status} />
+          <a href="/admin/show" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gold/50 bg-gold/10 px-4 text-sm font-semibold text-gold hover:bg-gold/20">
+            Show director
+          </a>
           <a href="/admin/host" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-semibold hover:bg-white/10">
             AI host setup
           </a>

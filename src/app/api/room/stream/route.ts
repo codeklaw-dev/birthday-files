@@ -1,18 +1,9 @@
 import type { NextRequest } from "next/server";
 import { viewFor } from "@/lib/game/engine";
 import type { Role, RoomState } from "@/lib/game/types";
-import type { RoomView } from "@/lib/game/types";
-import { signedMediaUrlStable } from "@/lib/invite/server/secrets";
+import { withMedia } from "@/lib/server/media-view";
 import { knowledge } from "@/lib/host/server/knowledge";
 import { isHostKey, isJudgeKey, lanHosts, roomStore } from "@/lib/server/room-store";
-
-/** Screens that show exhibits get short-lived signed links; phones don't need them. */
-function withMedia(view: RoomView): RoomView {
-  if (view.role !== "player" && view.surprise?.mediaId) view = { ...view, surprise: { ...view.surprise, mediaUrl: signedMediaUrlStable(view.surprise.mediaId) } };
-  const g = view.games.game;
-  if (view.role === "player" || g?.id !== "mystery" || !g.exhibit.mediaId) return view;
-  return { ...view, games: { ...view.games, game: { ...g, exhibit: { ...g.exhibit, mediaUrl: signedMediaUrlStable(g.exhibit.mediaId) } } } };
-}
 
 /** Server-Sent Events: pushes a role-filtered view on every state change. */
 export async function GET(req: NextRequest) {

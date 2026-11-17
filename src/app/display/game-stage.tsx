@@ -289,9 +289,9 @@ function Mystery({ g, clockOffset }: { g: MysteryView; clockOffset: number }) {
           ) : ex.mediaUrl ? (
             ex.kind === "photo" ? (
               // eslint-disable-next-line @next/next/no-img-element -- private, signed link
-              <img src={ex.mediaUrl} alt="Mystery exhibit" className="max-h-[58vh] rounded-2xl object-contain shadow-2xl" />
+              <img src={ex.mediaUrl} alt="Mystery exhibit" className="max-h-[calc(var(--tvh)*58)] rounded-2xl object-contain shadow-2xl" />
             ) : (
-              <video src={ex.mediaUrl} autoPlay controls playsInline className="max-h-[58vh] rounded-2xl bg-black shadow-2xl" />
+              <video src={ex.mediaUrl} autoPlay controls playsInline className="max-h-[calc(var(--tvh)*58)] rounded-2xl bg-black shadow-2xl" />
             )
           ) : (
             <p className="text-2xl text-haze">Exhibit unavailable</p>
@@ -392,7 +392,7 @@ export function SurpriseScene({ view }: { view: RoomView }) {
       <div className="grid w-full max-w-6xl items-center gap-10 lg:grid-flow-col">
         {s.mediaUrl && (
           // eslint-disable-next-line @next/next/no-img-element -- private, signed link
-          <img src={s.mediaUrl} alt={s.from ? `Photo from ${s.from}` : "Surprise photo"} className="max-h-[52vh] rounded-2xl object-contain shadow-2xl" />
+          <img src={s.mediaUrl} alt={s.from ? `Photo from ${s.from}` : "Surprise photo"} className="max-h-[calc(var(--tvh)*52)] rounded-2xl object-contain shadow-2xl" />
         )}
         <div className="file-card animate-pop p-10 text-center">
           {s.kind === "announcement" && <h1 className="font-display text-5xl font-extrabold text-ink-900">{s.title}</h1>}

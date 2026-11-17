@@ -1,14 +1,15 @@
 "use client";
 
 import QRCode from "qrcode";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { cx, Leaderboard, Logo, StatusDot, TILE } from "@/components/ui";
 import { HostLine } from "@/components/host-line";
 import { useNow } from "@/lib/client/hooks";
 import { useHostAudio } from "@/lib/host/client/use-host-audio";
 import { BoardsScene, GameStage, SurpriseScene, useGameCues, WheelScene } from "./game-stage";
-import { useRoom } from "@/lib/client/use-room";
+import { useRoom, type ConnectionStatus } from "@/lib/client/use-room";
+import { CakeStage, Confetti, RehearsalRibbon, SceneStage, ShowOverlays, TvFrame } from "./show-stage";
 import { EVENT } from "@/lib/event";
 import type { RoomView } from "@/lib/game/types";
 
@@ -23,79 +24,142 @@ function joinUrlFor(view: RoomView | null): string | null {
   return `${origin}/play`;
 }
 
-export function DisplayScreen() {
-  const { view, status, clockOffset } = useRoom("display");
-  const joinUrl = joinUrlFor(view);
+type Sfx = Parameters<typeof useGameCues>[2];
+interface StageAudio {
+  sfx: Sfx;
+  clipIfIdle?: (key: string, lang: "en" | "bn") => void;
+}
+const SILENT: StageAudio = { sfx: () => {} };
 
+/** The TV. `?mirror=1` is a silent copy for the organiser's dashboard (no voice, no sound effects). */
+export function DisplayScreen() {
+  const mirror = useSyncExternalStore(
+    noSubscribe,
+    () => new URLSearchParams(window.location.search).get("mirror") === "1",
+    () => null,
+  );
+  if (mirror === null) return <TvShell view={null} status={null} clockOffset={0} audio={SILENT} />;
+  return mirror ? <MirrorScreen /> : <LiveScreen />;
+}
+const noSubscribe = () => () => {};
+
+function MirrorScreen() {
+  const { view, status, clockOffset } = useRoom("display");
+  return <TvShell view={view} status={status} clockOffset={clockOffset} audio={SILENT} />;
+}
+
+function LiveScreen() {
+  const { view, status, clockOffset } = useRoom("display");
   const audio = useHostAudio(view);
   useGameCues(view, clockOffset, audio.sfx);
-
   return (
-    <main className="stage flex h-dvh flex-col overflow-hidden">
-      <div className="bulbs" aria-hidden />
-      <header className="flex items-center justify-between gap-6 px-6 pt-4 lg:px-10">
-        <Logo size="sm" />
-        <div className="flex items-center gap-6">
-          {view && view.phase !== "lobby" && joinUrl && (
-            <span className="hidden font-mono text-sm text-haze md:inline">
-              Join at <span className="text-gold">{joinUrl.replace(/^https?:\/\//, "")}</span>
-            </span>
-          )}
-          <span className="font-mono text-sm text-haze">{view?.players.length ?? 0} players</span>
-          {audio.unlocked && (
-            <span className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-widest text-haze" title="Sound is on">
-              <Volume2 className="size-4 text-go" aria-hidden /> Sound
-            </span>
-          )}
-          <StatusDot status={status} />
-        </div>
-      </header>
-
-      <section className="flex min-h-0 flex-1 flex-col px-6 py-6 lg:px-10">
-        {!view ? (
-          <p className="m-auto text-2xl text-haze">Warming up the stage…</p>
-        ) : view.phase === "lobby" ? (
-          <Lobby view={view} joinUrl={joinUrl} />
-        ) : view.phase === "question" || view.phase === "reveal" ? (
-          <QuestionBoard view={view} clockOffset={clockOffset} onCountdown={(left) => {
-            if (!view.host.voice) return;
-            if (left === 5) audio.clipIfIdle("time_warning", view.host.utterance.lang === "bn" ? "bn" : "en");
-            if (left <= 3 && left > 0) audio.sfx("tick");
-          }} />
-        ) : view.phase === "leaderboard" ? (
-          <Board title="Standings" view={view} />
-        ) : view.phase === "messages" ? (
-          <MessageWall view={view} />
-        ) : view.phase === "game" && view.games.game ? (
-          <GameStage view={view} clockOffset={clockOffset} sfx={audio.sfx} />
-        ) : view.phase === "wheel" ? (
-          <WheelScene view={view} sfx={audio.sfx} />
-        ) : view.phase === "boards" ? (
-          <BoardsScene view={view} />
-        ) : view.phase === "surprise" && view.surprise ? (
-          <SurpriseScene view={view} />
-        ) : view.phase === "cake" ? (
-          <Cake view={view} />
-        ) : (
-          <Finale view={view} />
-        )}
-      </section>
-
-      {view && view.host.subtitles && (
-        <footer className="border-t border-white/10 bg-ink-950/70 px-6 py-4 lg:px-10">
-          <HostLine host={view.host} name={view.hostName} speaking={!!audio.speaking} big />
-        </footer>
-      )}
-
+    <TvShell view={view} status={status} clockOffset={clockOffset} audio={audio} speaking={!!audio.speaking} soundOn={audio.unlocked}>
       {view && !audio.unlocked && (
         <button
           onClick={() => void audio.unlock()}
-          className="fixed bottom-28 right-6 z-50 inline-flex animate-pop items-center gap-3 rounded-2xl bg-gold px-6 py-4 font-display text-xl font-extrabold text-ink-950 shadow-[0_8px_0_0_var(--color-gold-deep)] active:translate-y-1"
+          className="absolute bottom-28 right-6 z-50 inline-flex animate-pop items-center gap-3 rounded-2xl bg-gold px-6 py-4 font-display text-xl font-extrabold text-ink-950 shadow-[0_8px_0_0_var(--color-gold-deep)] active:translate-y-1"
         >
           <VolumeX className="size-6" aria-hidden /> Click to turn on the host&apos;s voice
         </button>
       )}
-    </main>
+    </TvShell>
+  );
+}
+
+export function TvShell({
+  view,
+  status,
+  clockOffset,
+  audio,
+  speaking = false,
+  soundOn = false,
+  children,
+}: {
+  view: RoomView | null;
+  status: ConnectionStatus | null;
+  clockOffset: number;
+  audio: StageAudio;
+  speaking?: boolean;
+  soundOn?: boolean;
+  children?: React.ReactNode;
+}) {
+  const joinUrl = joinUrlFor(view);
+  return (
+    <TvFrame>
+      <main className="stage relative flex size-full flex-col overflow-hidden">
+        <div className="bulbs" aria-hidden />
+        <header className="flex items-center justify-between gap-6 px-10 pt-4">
+          <Logo size="sm" />
+          <div className="flex items-center gap-6">
+            {view?.show.rehearsal && <RehearsalRibbon />}
+            {view && view.phase !== "lobby" && joinUrl && (
+              <span className="font-mono text-sm text-haze">
+                Join at <span className="text-gold">{joinUrl.replace(/^https?:\/\//, "")}</span>
+              </span>
+            )}
+            <span className="font-mono text-sm text-haze">{view?.players.length ?? 0} players</span>
+            {soundOn && (
+              <span className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-widest text-haze" title="Sound is on">
+                <Volume2 className="size-4 text-go" aria-hidden /> Sound
+              </span>
+            )}
+            {status && <StatusDot status={status} />}
+          </div>
+        </header>
+
+        <section className="flex min-h-0 flex-1 flex-col px-10 py-6">
+          {!view ? (
+            <p className="m-auto text-2xl text-haze">Warming up the stage…</p>
+          ) : view.show.hold ? null : (
+            // Emergency stop unmounts the scene entirely: no video or sound keeps going underneath.
+            <Stage view={view} clockOffset={clockOffset} audio={audio} joinUrl={joinUrl} />
+          )}
+        </section>
+
+        {view && view.host.subtitles && !view.show.hold && (
+          <footer className="border-t border-white/10 bg-ink-950/70 px-10 py-4">
+            <HostLine host={view.host} name={view.hostName} speaking={speaking} big />
+          </footer>
+        )}
+        {view && <ShowOverlays view={view} />}
+        {children}
+      </main>
+    </TvFrame>
+  );
+}
+
+/** What's on the TV for the current phase. Pure: used live, in the silent mirror and in previews. */
+export function Stage({ view, clockOffset, audio, joinUrl }: { view: RoomView; clockOffset: number; audio: StageAudio; joinUrl: string | null }) {
+  return view.phase === "lobby" ? (
+    <Lobby view={view} joinUrl={joinUrl} />
+  ) : view.phase === "question" || view.phase === "reveal" ? (
+    <QuestionBoard
+      view={view}
+      clockOffset={clockOffset}
+      onCountdown={(left) => {
+        if (!view.host.voice || view.show.paused) return;
+        if (left === 5) audio.clipIfIdle?.("time_warning", view.host.utterance.lang === "bn" ? "bn" : "en");
+        if (left <= 3 && left > 0) audio.sfx("tick");
+      }}
+    />
+  ) : view.phase === "leaderboard" ? (
+    <Board title="Standings" view={view} />
+  ) : view.phase === "messages" ? (
+    <MessageWall view={view} />
+  ) : view.phase === "game" && view.games.game ? (
+    <GameStage view={view} clockOffset={clockOffset} sfx={audio.sfx} />
+  ) : view.phase === "wheel" ? (
+    <WheelScene view={view} sfx={audio.sfx} />
+  ) : view.phase === "boards" ? (
+    <BoardsScene view={view} />
+  ) : view.phase === "surprise" && view.surprise ? (
+    <SurpriseScene view={view} />
+  ) : view.phase === "scene" && view.scene ? (
+    <SceneStage view={view} />
+  ) : view.phase === "cake" ? (
+    <CakeStage view={view} />
+  ) : (
+    <Finale view={view} />
   );
 }
 
@@ -111,7 +175,7 @@ function Qr({ url }: { url: string }) {
     };
   }, [url]);
   return (
-    <div className="file-card aspect-square w-full max-w-[min(38vh,22rem)] p-3">
+    <div className="file-card aspect-square w-full max-w-[min(calc(var(--tvh)*38),22rem)] p-3">
       {/* eslint-disable-next-line @next/next/no-img-element -- data URL, nothing to optimise */}
       {src ? <img src={src} alt={`QR code to join at ${url}`} className="size-full" /> : <div className="size-full animate-pulse bg-ink-900/10" />}
     </div>
@@ -130,7 +194,7 @@ function Lobby({ view, joinUrl }: { view: RoomView; joinUrl: string | null }) {
           <div className="font-mono text-sm uppercase tracking-[0.3em] text-gold">
             Detectives on the case · {view.players.length}
           </div>
-          <ul className="mt-3 flex max-h-[26vh] flex-wrap gap-2 overflow-hidden">
+          <ul className="mt-3 flex max-h-[calc(var(--tvh)*26)] flex-wrap gap-2 overflow-hidden">
             {view.players.length === 0 && <li className="text-xl text-haze">Waiting for the first detective…</li>}
             {[...view.players].sort((a, b) => a.joinedAt - b.joinedAt).map((p) => (
               <li key={p.id} className="animate-pop rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xl font-semibold">
@@ -262,41 +326,6 @@ function MessageWall({ view }: { view: RoomView }) {
   );
 }
 
-function Cake({ view }: { view: RoomView }) {
-  const { candles, lit } = view.cake;
-  const out = lit === 0;
-  return (
-    <div className="relative flex flex-1 flex-col items-center justify-center gap-8 text-center">
-      {out && <Confetti />}
-      <h1 className="font-display text-5xl font-extrabold lg:text-7xl">
-        {out ? <span className="gold-text">Happy birthday, {EVENT.guestOfHonour}!</span> : "Tap your phones. Blow them out!"}
-      </h1>
-      <div role="img" aria-label={`Birthday cake with ${lit} of ${candles} candles lit`} className="flex flex-col items-center">
-        <div className="flex items-end gap-8">
-          {Array.from({ length: candles }, (_, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <div
-                className={cx(
-                  "mb-1 h-10 w-6 origin-bottom rounded-[50%_50%_50%_50%/60%_60%_40%_40%] bg-gradient-to-t from-stamp via-gold to-cream transition-opacity duration-500",
-                  i < lit ? "animate-flicker shadow-[0_0_30px_8px_rgb(246_196_83/0.6)]" : "opacity-0",
-                )}
-              />
-              <div className="h-20 w-4 rounded-sm bg-[repeating-linear-gradient(135deg,var(--color-cream)_0_8px,var(--color-tile-b)_8px_16px)]" />
-            </div>
-          ))}
-        </div>
-        <div className="h-16 w-[26rem] max-w-[80vw] rounded-t-3xl bg-cream" />
-        <div className="h-6 w-[26rem] max-w-[80vw] bg-stamp" />
-        <div className="h-20 w-[30rem] max-w-[90vw] rounded-b-2xl rounded-t-md bg-[#f3b7c4]" />
-        <div className="h-3 w-[34rem] max-w-[96vw] rounded-full bg-white/20" />
-      </div>
-      <p className="font-mono text-xl uppercase tracking-[0.3em] text-haze">
-        {out ? "Make a wish" : `${lit} of ${candles} candles lit`}
-      </p>
-    </div>
-  );
-}
-
 function Finale({ view }: { view: RoomView }) {
   const [first, second, third] = view.players;
   const podium = [
@@ -325,23 +354,6 @@ function Finale({ view }: { view: RoomView }) {
           </li>
         ))}
       </ol>
-    </div>
-  );
-}
-
-const CONFETTI = ["🎉", "🎈", "✨", "🎂", "⭐", "🎊"];
-function Confetti() {
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {Array.from({ length: 24 }, (_, i) => (
-        <span
-          key={i}
-          className="absolute -top-12 animate-drift text-4xl"
-          style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 0.43) % 9}s`, animationDuration: `${7 + (i % 5)}s` }}
-        >
-          {CONFETTI[i % CONFETTI.length]}
-        </span>
-      ))}
     </div>
   );
 }

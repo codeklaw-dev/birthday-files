@@ -176,3 +176,12 @@ Five games share one server-authoritative framework (`src/lib/games/`). Each gam
 - Rate limits are in-memory per IP (messages 6/min, joins 12/min); fine for one party, not for the public internet.
 - The host key travels in the SSE query string. Acceptable on a home network, replaced by real auth in Milestone 2.
 - shadcn/ui, React Hook Form and Framer Motion are not installed yet; the handful of components here did not need them.
+
+## Show director (Phase 5)
+
+- `src/lib/show/` — running order (`config.ts`), verified 21 November history (`history.ts`), and the pure director engine (`engine-show.ts`): segments, pause/emergency hold, presentational scenes, cake stages. It plugs into `applyAction` like the games module.
+- `src/lib/show/server/build.ts` — turns a segment into its starting action; all scene content (spotlight, honours, montage, ceremony, prizes, history) is built here from approved, consented submissions. `/api/room/action` refuses client-built scenes.
+- `/api/show/preview` applies a segment to a throwaway copy of the room and returns the TV's view; `/display/preview` renders it in an iframe on the dashboard.
+- `src/app/display/show-stage.tsx` — 16:9 `TvFrame`, scenes, cake, overlays, media fallbacks; `display-screen.tsx` exposes a pure `Stage` used live, in the silent mirror (`?mirror=1`) and in previews.
+- Rehearsal: `scripts/rehearsal.mjs` sets `REHEARSAL=1` and `.data/rehearsal/*` folders, `scripts/seed-rehearsal.ts` seeds fictional guests; `src/lib/server/rehearsal.ts` makes every store refuse non-rehearsal folders in that mode.
+- See [SHOW.md](SHOW.md) for operating the show.

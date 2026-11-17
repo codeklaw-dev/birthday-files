@@ -4,6 +4,7 @@ import { knowledge } from "@/lib/host/server/knowledge";
 import type { GameId } from "@/lib/games/types";
 import { ensureHostService } from "@/lib/host/server/service";
 import { clientIp, rateLimit } from "@/lib/server/rate-limit";
+import { startFor } from "@/lib/show/server/build";
 import { isHostKey, isJudgeKey, roomStore } from "@/lib/server/room-store";
 
 const LIMITS: Record<string, [number, number]> = {
@@ -13,6 +14,7 @@ const LIMITS: Record<string, [number, number]> = {
   "game/clue": [10, 10_000],
   "game/vote": [10, 10_000],
   "game/guess": [10, 10_000],
+  "judge/cake/blow": [10, 10_000],
 };
 const GAMES: GameId[] = ["imposter", "wkmb", "survey", "trial", "mystery"];
 const fail = (error: string, status: number) => Response.json({ ok: false, error }, { status });
@@ -35,6 +37,12 @@ export async function POST(req: Request) {
   if (limit && !rateLimit(`${clientIp(req)}:${type}`, limit[0], limit[1])) return fail("Slow down a little and try again in a minute.", 429);
 
   // Server-built inputs: anything the client sent for these fields is replaced.
+  if (type === "host/scene/start") return fail("Start scenes from the running order.", 403);
+  if (type === "host/show/go") {
+    const seg = roomStore.getState().show.plan.find((s) => s.id === action.segmentId);
+    if (!seg) return fail("Unknown segment.", 422);
+    action = { type, segmentId: seg.id, start: startFor(seg, roomStore.getState()) ?? undefined } as typeof action;
+  }
   if (type === "host/game/start") {
     if (!GAMES.includes(action.game as GameId)) return fail("Unknown game.", 422);
     action = { type, game: action.game as GameId, content: buildContent(action.game as GameId, roomStore.getState()) } as typeof action;

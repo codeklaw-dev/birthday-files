@@ -3,7 +3,10 @@ import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { networkInterfaces } from "node:os";
 import path from "node:path";
-import { applyAction, createRoom } from "@/lib/game/engine";
+import { applyAction, createRoom, freshCake } from "@/lib/game/engine";
+import { defaultPlan } from "@/lib/show/config";
+import { freshShow } from "@/lib/show/engine-show";
+import { guardDataDir, REHEARSAL } from "./rehearsal";
 import { freshGames } from "@/lib/games/engine-games";
 import type { Action, ActionResult, RoomState } from "@/lib/game/types";
 
@@ -16,7 +19,7 @@ import type { Action, ActionResult, RoomState } from "@/lib/game/types";
  * work on Vercel serverless; Supabase replaces it (docs/ARCHITECTURE.md).
  */
 const SNAPSHOT_VERSION = 3;
-const DATA_DIR = process.env.ROOM_DATA_DIR || path.join(process.cwd(), ".data");
+const DATA_DIR = guardDataDir(process.env.ROOM_DATA_DIR || path.join(process.cwd(), ".data"), "the room snapshot");
 const SNAPSHOT = path.join(DATA_DIR, "room.json");
 
 function loadSnapshot(): RoomState | null {
@@ -28,10 +31,12 @@ function loadSnapshot(): RoomState | null {
     const { scoreLog: _old, ...rest } = raw.state as RoomState & { scoreLog?: unknown };
     void _old;
     // Older snapshots predate surprises and the TV audio settings: fill in defaults.
-    const defaults = { ...freshGames(), surprise: null } as Partial<RoomState>;
+    const defaults = { ...freshGames(), surprise: null, scene: null, show: freshShow(defaultPlan()) } as Partial<RoomState>;
     const state = Object.assign(defaults, rest) as RoomState;
     const hostDefaults = { volume: 0.9, muted: false, subtitles: true };
-    return { ...state, host: Object.assign(hostDefaults, state.host) };
+    // Older snapshots had a five-candle cake: start a fresh one.
+    const cake = typeof state.cake?.mezOut === "boolean" ? state.cake : freshCake(state.players.length);
+    return { ...state, cake, show: { ...state.show, rehearsal: REHEARSAL }, host: Object.assign(hostDefaults, state.host) };
   } catch {
     return null;
   }
@@ -43,7 +48,7 @@ const newJudgeKey = () => randomBytes(18).toString("base64url");
 
 class RoomStore {
   private state: RoomState = (() => {
-    const s = loadSnapshot() ?? createRoom("MEZ26", Date.now());
+    const s = loadSnapshot() ?? createRoom("MEZ26", Date.now(), "", REHEARSAL);
     return s.judgeKey ? s : { ...s, judgeKey: newJudgeKey() };
   })();
   private listeners = new Set<(s: RoomState, action: Action | null) => void>();

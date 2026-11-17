@@ -12,7 +12,8 @@
     "party": "next build && next start -H 0.0.0.0",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
     "narration:render": "tsx --conditions=react-server scripts/render-narration.ts",
-    "host:check": "tsx --conditions=react-server scripts/host-check.ts"
+    "host:check": "tsx --conditions=react-server scripts/host-check.ts",
+    "rehearsal": "node scripts/rehearsal.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.73.0",

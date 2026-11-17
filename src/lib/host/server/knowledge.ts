@@ -1,4 +1,5 @@
 import "server-only";
+import { guardDataDir } from "@/lib/server/rehearsal";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { Bilingual, Lang } from "@/lib/game/types";
@@ -78,7 +79,7 @@ export const DEFAULT_RULES = [
 
 export const LIMITS = { style: 400, rule: 200, rules: 10, fact: 200, facts: 200, title: 60, announcement: 300, announcements: 50, turns: 8 };
 
-const dir = () => process.env.HOST_DATA_DIR || ".data/host";
+const dir = () => guardDataDir(process.env.HOST_DATA_DIR || ".data/host", "the host knowledge");
 const file = () => `${dir()}/knowledge.json`;
 
 const fresh = (): Data => ({

@@ -1,6 +1,7 @@
 import type { GamesAction } from "@/lib/games/actions";
 import type { GamesSlice } from "@/lib/games/types";
 import type { GamesView } from "@/lib/games/views";
+import type { Scene, SceneView, ShowAction, ShowState, ShowView } from "@/lib/show/types";
 import type { HostLangMode, HostState, HostView, SfxKind, SpokenLang, UtteranceSource } from "@/lib/host/types";
 
 /**
@@ -20,7 +21,8 @@ export type Phase =
   | "game"
   | "wheel"
   | "boards"
-  | "surprise";
+  | "surprise"
+  | "scene";
 
 export type Lang = "en" | "bn";
 export type Bilingual = Record<Lang, string>;
@@ -58,6 +60,19 @@ export interface GuestMessage {
   createdAt: number;
 }
 
+/**
+ * The virtual cake: guests blow out every candle but the last, which is
+ * Mez's (the judge phone, or the organiser's "blow for Mez"). Then the cut,
+ * then the hand-over to the real cake.
+ */
+export interface CakeState {
+  candles: number;
+  blows: number;
+  perCandle: number;
+  mezOut: boolean;
+  stage: "candles" | "cut" | "real";
+}
+
 /** Full authoritative state. Lives on the server only. */
 /** A surprise on the TV: an approved announcement or a guest's memory for Mez. Built by the server. */
 export interface SurpriseContent {
@@ -89,7 +104,9 @@ export interface RoomState extends GamesSlice {
   /** Points awarded for the current question, keyed by public player id. */
   lastGains: Record<string, number>;
   messages: GuestMessage[];
-  cake: { candles: number; blows: number; perCandle: number };
+  cake: CakeState;
+  show: ShowState;
+  scene: Scene | null;
   host: HostState;
   /** Monotonic revision, bumped on every change. */
   rev: number;
@@ -125,7 +142,9 @@ export interface RoomView {
   lastGains: Record<string, number>;
   /** Approved messages for everyone; all messages for the host. */
   messages: GuestMessage[];
-  cake: { candles: number; lit: number };
+  cake: { candles: number; lit: number; guestsDone: boolean; mezOut: boolean; stage: CakeState["stage"] };
+  show: ShowView;
+  scene: SceneView | null;
   host: HostView;
   games: GamesView;
   /** mediaUrl is filled in by the server (signed link) for the TV, judge and host. */
@@ -173,7 +192,7 @@ export type HostAction =
 /** Fired by the server timer, never accepted from clients. */
 export type SystemAction = { type: "system/timeUp"; questionId: string };
 
-export type Action = PlayerAction | HostAction | SystemAction | GamesAction;
+export type Action = PlayerAction | HostAction | SystemAction | GamesAction | ShowAction;
 
 export type ActionResult =
   | { ok: true; state: RoomState }

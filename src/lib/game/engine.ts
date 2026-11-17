@@ -4,6 +4,10 @@ import { SFX_KINDS, type HostState, type Line } from "@/lib/host/types";
 import type { GamesAction } from "@/lib/games/actions";
 import { appendAwards, applyGamesAction, correction, freshGames, gamesView, isGamesAction, syncPlayerScores } from "@/lib/games/engine-games";
 import { boardTotals } from "@/lib/games/ledger";
+import { defaultPlan } from "@/lib/show/config";
+import { applyShowAction, blockedWhilePaused, freshShow, isShowAction, showView } from "@/lib/show/engine-show";
+import type { ShowAction } from "@/lib/show/types";
+import { EVENT } from "@/lib/event";
 import { MOCK_QUESTIONS } from "./mock-data";
 import type {
   Action,
@@ -29,7 +33,10 @@ export const LIMITS = {
   basePoints: 100,
   speedBonus: 50,
   maxAward: 500,
-  candles: 5,
+  /** One per year. */
+  candles: EVENT.age,
+  /** Taps each guest needs, on average, to get the guests' candles out. */
+  tapsPerGuest: 12,
 } as const;
 
 export interface EngineCtx {
@@ -39,7 +46,15 @@ export interface EngineCtx {
   random?: () => number;
 }
 
-export function createRoom(code = "MEZ26", now = 0, judgeKey = ""): RoomState {
+export const freshCake = (players = 0): RoomState["cake"] => ({
+  candles: LIMITS.candles,
+  blows: 0,
+  perCandle: Math.max(1, Math.round((Math.max(players, 1) * LIMITS.tapsPerGuest) / Math.max(1, LIMITS.candles - 1))),
+  mezOut: false,
+  stage: "candles",
+});
+
+export function createRoom(code = "MEZ26", now = 0, judgeKey = "", rehearsal = false): RoomState {
   return {
     code,
     phase: "lobby",
@@ -54,7 +69,9 @@ export function createRoom(code = "MEZ26", now = 0, judgeKey = ""): RoomState {
     messages: [],
     ...freshGames(judgeKey),
     surprise: null,
-    cake: { candles: LIMITS.candles, blows: 0, perCandle: 3 },
+    cake: freshCake(),
+    show: freshShow(defaultPlan(), rehearsal),
+    scene: null,
     host: initialHost("u0", now),
     rev: 0,
   };
@@ -64,9 +81,12 @@ export function rankPlayers(players: Player[]): Player[] {
   return [...players].sort((a, b) => b.score - a.score || a.joinedAt - b.joinedAt);
 }
 
+/** Guests can blow out every candle but the last one; that one is Mez's. */
 export function candlesLit(cake: RoomState["cake"]): number {
-  return Math.max(0, cake.candles - Math.floor(cake.blows / cake.perCandle));
+  if (cake.mezOut) return 0;
+  return Math.max(1, cake.candles - Math.floor(cake.blows / cake.perCandle));
 }
+const guestsDone = (cake: RoomState["cake"]) => cake.mezOut || cake.candles - Math.floor(cake.blows / cake.perCandle) <= 1;
 
 const clean = (s: unknown, max: number) =>
   typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "";
@@ -134,6 +154,8 @@ function reveal(state: RoomState, ctx: EngineCtx): ActionResult {
 
 export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): ActionResult {
   const { now } = ctx;
+  if (blockedWhilePaused(state, action.type)) return fail("Paused for a moment — hang tight.");
+  if (isShowAction(action.type)) return applyShowAction(state, action as ShowAction, ctx, applyAction);
   if (isGamesAction(action.type)) return applyGamesAction(state, action as GamesAction, ctx);
   switch (action.type) {
     case "join": {
@@ -177,9 +199,11 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
     case "blow": {
       if (!state.tokens[action.token]) return fail("Join the game first.");
       if (state.phase !== "cake") return fail("The cake isn't out yet.");
-      if (candlesLit(state.cake) === 0) return fail("The candles are already out.");
+      if (state.cake.mezOut) return fail("The candles are already out.");
+      if (guestsDone(state.cake)) return fail("Only Mez's candle is left — over to Mez!");
       const cake = { ...state.cake, blows: state.cake.blows + 1 };
-      return ok({ ...state, cake, host: candlesLit(cake) === 0 ? say(state, LINES.cakeDone(), ctx) : state.host });
+      const handover = { cue: "cakeMez", text: { en: "One candle left — and that one belongs to Mez. Go on, Mez!", bn: "একটাই মোমবাতি বাকি — ওটা মেজের। নাও মেজ, নিভিয়ে দাও!" }, bigMoment: true };
+      return ok({ ...state, cake, host: guestsDone(cake) ? say(state, handover, ctx) : state.host });
     }
 
     case "submitMessage": {
@@ -231,7 +255,9 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       return ok({
         ...state,
         phase: "cake",
-        cake: { candles: LIMITS.candles, blows: 0, perCandle: Math.max(3, state.players.length * 2) },
+        scene: null,
+        surprise: null,
+        cake: freshCake(state.players.length),
         host: say(state, LINES.cake(), ctx),
       });
 
@@ -264,6 +290,7 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
         audit: [...state.audit, { id: ctx.newId(), at: now, by: "host" as const, text: "Game reset: scores zeroed, progress cleared" }],
         points: state.points,
         setup: state.setup,
+        show: { ...state.show, paused: null, hold: null },
         wheel: { ...state.wheel, current: null },
         host: say(
           { ...state, host: { ...fresh.host, mode: state.host.mode, voice: state.host.voice, autoQuips: state.host.autoQuips, count: state.host.count, recent: state.host.recent } },
@@ -417,7 +444,26 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
     myGain: me && state.phase === "reveal" ? (state.lastGains[me.id] ?? 0) : null,
     lastGains: state.phase === "reveal" || role === "host" ? state.lastGains : {},
     messages: role === "host" ? state.messages : state.messages.filter((m) => m.status === "approved"),
-    cake: { candles: state.cake.candles, lit: candlesLit(state.cake) },
+    cake: { candles: state.cake.candles, lit: candlesLit(state.cake), guestsDone: guestsDone(state.cake), mezOut: state.cake.mezOut, stage: state.cake.stage },
+    show: showView(state),
+    scene: state.scene
+      ? {
+          id: state.scene.id,
+          kind: state.scene.kind,
+          title: state.scene.title,
+          subtitle: state.scene.subtitle,
+          index: state.scene.index,
+          revealed: state.scene.revealed,
+          startedAt: state.scene.startedAt,
+          // Spotlight is anonymous until the reveal; phones never get media.
+          items: role === "player" ? [] : state.scene.items.map((it, i) => ({
+            ...it,
+            from: role === "host" || state.scene!.kind !== "spotlight" || (i === state.scene!.index && state.scene!.revealed) || i < state.scene!.index ? it.from : null,
+            fromDetail: role === "host" || state.scene!.kind !== "spotlight" || (i === state.scene!.index && state.scene!.revealed) || i < state.scene!.index ? it.fromDetail : null,
+            mediaUrl: null,
+          })),
+        }
+      : null,
     host: hostView(state.host),
     games: gamesView(state, { role, playerId: me?.id ?? null }),
     surprise: state.surprise
