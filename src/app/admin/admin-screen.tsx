@@ -16,7 +16,7 @@ export function AdminScreen() {
   return <Dashboard hostKey={hostKey} onLock={() => setHostKey(null)} />;
 }
 
-function KeyGate({ onUnlock }: { onUnlock: (key: string) => void }) {
+export function KeyGate({ onUnlock }: { onUnlock: (key: string) => void }) {
   const [key, setKey] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -79,6 +79,9 @@ function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void })
         </div>
         <div className="flex items-center gap-3">
           <StatusDot status={status} />
+          <a href="/admin/submissions" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-semibold hover:bg-white/10">
+            Guest submissions
+          </a>
           <a href="/display" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-semibold hover:bg-white/10">
             Open TV display <ExternalLink className="size-4" aria-hidden />
           </a>

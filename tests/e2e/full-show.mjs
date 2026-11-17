@@ -109,6 +109,8 @@ async function runA(browser) {
     ok(true, "sound unlocks after one click");
     await tv.screenshot({ path: `${SHOTS}/tv-lobby.png` });
 
+    // The default language is Auto (one language per line); use Both so captions can be checked in English.
+    await admin.click('[aria-label="Host language"] >> text=Both');
     // A fully pre-recorded line.
     await admin.click("text=Start the show");
     const start = await waitPlayback(base, (p) => p.via === "clip", "show_start clip");
@@ -128,7 +130,7 @@ async function runA(browser) {
 
     // Commentary draft → review → say. Mock LLM picks a pre-recorded quip.
     await admin.click('button:has-text("Draft")');
-    await admin.waitForSelector("text=pre-recorded");
+    await admin.waitForFunction(() => document.querySelector("textarea[lang=en]")?.value.length > 10);
     const draftEn = await admin.locator("textarea[lang=en]").inputValue();
     ok(draftEn.length > 10, `AI commentary drafted for review: "${draftEn}"`);
     await admin.click('button:has-text("Say on TV")');

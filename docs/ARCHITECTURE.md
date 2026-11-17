@@ -94,6 +94,34 @@ The earlier Casper integration requirement has been removed. The host is now pro
 
 Provider research, costs and set-up steps: [AI_PROVIDERS.md](AI_PROVIDERS.md).
 
+## Invite portal (guest RSVPs and submissions)
+
+`/invite` collects RSVPs (including "can't come, but want to take part"), three host-editable questions, a favourite memory, a funny accusation, an optional photo and an optional 15–60 second video, plus permission to show them at the party. `/admin/submissions` is where the host reviews them.
+
+```
+ phone  /invite ──POST /api/invite/submissions──► validate (zod, same schema as the form) ─► store
+           │        ◄── edit token (shown once) ──
+           ├──PUT /api/invite/media/photo|video (raw body, x-edit-token)──► stream to disk ─► checks ─► attach
+           └──GET/PUT/DELETE /api/invite/submissions/me (x-edit-token)
+ laptop /admin/submissions ──GET/PATCH/DELETE /api/invite/admin… (x-host-key)
+ <img>/<video> ──GET /api/invite/media/file/<id>?exp&sig  (15-minute signed link, Range support)
+```
+
+Storage (`src/lib/invite/server/store.ts`) is one JSON file plus a media folder under `.data/invite/` (override with `INVITE_DATA_DIR`), outside `public/`. Folders are created mode 700 and files mode 600, and writes are atomic. The class maps one-to-one onto future Supabase tables (`submissions`, `invite_settings`) and Storage buckets; that file and `paths.ts` are the only ones to replace.
+
+**Security model**
+
+| Who | Can do | How it's enforced |
+| --- | --- | --- |
+| Anyone | Read the three questions; create one RSVP (rate-limited) | Public routes |
+| The guest | Read, edit and withdraw *their own* RSVP; replace or remove their photo/video | 192-bit random edit token in the link fragment (`/invite#edit=…`, never sent in server logs or Referer). The server stores only its SHA-256 hash. |
+| The host | Everything: review, tag, order, delete, edit questions | `HOST_KEY` header (constant-time compare) |
+| An `<img>` or `<video>` tag | One file, for 15 minutes | HMAC-signed link (`INVITE_SIGNING_SECRET`, or a random key auto-generated into the data folder). Unsigned, expired or tampered links get 403. |
+
+**Upload checks.** File type is decided by the first bytes (JPEG/PNG/WebP; MP4/MOV/WebM), never by the name or the claimed Content-Type. Sizes are capped while streaming (photo 12 MB, video 150 MB). Video length is read from the file (MP4/MOV `mvhd`, WebM `Duration`). If a WebM recording has no duration, the browser's measurement is used and marked "length reported by the browser". Photos are resized to ≤ 2000 px in the browser, which drops EXIF, and the server also strips JPEG APP1–15/COM segments and PNG text/EXIF chunks, so GPS location never reaches the disk. **Video location metadata is not stripped** (that needs re-encoding with ffmpeg); videos are only ever visible to the host.
+
+**Moderation.** pending → approved / rejected, plus tags, honourable mention and a private note. The party's *running order* contains only approved submissions whose guest ticked permission. A guest edit after review sends the submission back to pending ("edited since review"). Withdrawing deletes the record and its files.
+
 ## Fairness rules in the engine
 
 - One answer per player per question; no changes after tapping.

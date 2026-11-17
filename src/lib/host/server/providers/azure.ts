@@ -4,12 +4,13 @@ import { call, env } from "./http";
 
 /**
  * Azure AI Speech neural TTS (REST). Best Bangladeshi Bangla voices
- * (bn-BD-NabanitaNeural, bn-BD-PradeepNeural). Free F0 tier exists, but an
- * Azure account needs a card at sign-up — only enable with approval.
+ * (bn-BD-NabanitaNeural, bn-BD-PradeepNeural). Use the Free (F0) pricing tier:
+ * it stops at its monthly allowance instead of billing. See docs/AI_PROVIDERS.md.
  */
 const VOICES: Record<Lang, () => string> = {
-  en: () => env("AZURE_VOICE_EN") || "en-GB-RyanNeural",
-  bn: () => env("AZURE_VOICE_BN") || "bn-BD-PradeepNeural",
+  // Female voices, to sit naturally next to Gemini's default "Kore" when the two alternate.
+  en: () => env("AZURE_VOICE_EN") || "en-GB-SoniaNeural",
+  bn: () => env("AZURE_VOICE_BN") || "bn-BD-NabanitaNeural",
 };
 
 const xml = (s: string) =>

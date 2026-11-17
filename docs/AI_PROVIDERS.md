@@ -39,6 +39,25 @@ Optional, **only with approval** (both require a credit/debit card on the accoun
 - Azure Speech for the Bangladeshi voices: `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.
 - Google Cloud TTS (bn-IN WaveNet voices): adapter not built yet.
 
+## Azure Speech set-up (free tier, no charges)
+
+You approved Azure as the unlimited live voice, on the condition that it costs nothing. These steps keep it on the **Free (F0)** tier, which stops at its monthly allowance instead of billing. Screens change, so follow the on-screen labels.
+
+1. Go to azure.microsoft.com/free and create a free account (Microsoft or GitHub login, phone number, and a non-prepaid credit/debit card). Microsoft says the card isn't charged; a temporary ~$1 verification hold may appear and then drop off.
+2. In portal.azure.com choose **Create a resource → Speech** (under Azure AI services).
+3. Pick a **Region** near the party, e.g. *Southeast Asia* (`southeastasia`).
+4. Set **Pricing tier: Free F0**. It allows 0.5M characters of neural voice a month, roughly 100 parties' worth. One F0 Speech resource is allowed per subscription.
+5. After it deploys, open **Keys and Endpoint** and copy *Key 1* and the *Location/Region* into `.env.local`:
+   ```
+   AZURE_SPEECH_KEY=...
+   AZURE_SPEECH_REGION=southeastasia
+   ```
+6. **Never click "Upgrade" / move to pay-as-you-go.** Without upgrading, Azure cannot bill you. When the free account's 30-day period ends it pauses services rather than charging. The party falls inside the first 30 days.
+7. Optional peace of mind: *Cost Management → Budgets* → set a $1 budget with an email alert.
+8. Run `npm run host:check`: Azure appears under TTS with English and Bangla samples.
+
+By default Gemini is tried first and Azure takes over once Gemini's daily quota runs out. For one consistent voice all night, set `HOST_TTS_CHAIN=azure,gemini` (Azure first). The default Azure voices are female (`bn-BD-NabanitaNeural`, `en-GB-SoniaNeural`) to match Gemini's default voice.
+
 ## Comparison
 
 | Provider | Card needed? | Free allowance | Bangla | Notes for this show |

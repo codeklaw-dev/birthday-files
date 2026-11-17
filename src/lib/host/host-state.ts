@@ -15,7 +15,8 @@ export function resolveLang(mode: HostLangMode, count: number, bigMoment = false
 export function initialHost(id: string, now: number): HostState {
   const line = LINES.lobby();
   const utterance: Utterance = { id, cue: line.cue, text: line.text, lang: "both", clip: line.clip, source: "script", at: now };
-  return { utterance, recent: [utterance], mode: "both", voice: true, autoQuips: false, sfx: null, stopId: null, count: 1 };
+  // Auto: one language per line (both for big moments), which halves the free voice quota used.
+  return { utterance, recent: [utterance], mode: "auto", voice: true, autoQuips: false, sfx: null, stopId: null, count: 1 };
 }
 
 export function speak(

@@ -9,7 +9,8 @@ const bangla = Hind_Siliguri({ variable: "--font-bangla", subsets: ["bengali"], 
 
 export const metadata: Metadata = {
   title: { default: "The Birthday Files: Mez Edition", template: "%s · The Birthday Files" },
-  description: "An interactive, AI-hosted birthday game show. 21 November 2026.",
+  // Guests see this in link previews: keep the AI host a surprise.
+  description: "Mez's 24th birthday game show. Saturday 21 November 2026.",
   robots: { index: false, follow: false },
 };
 

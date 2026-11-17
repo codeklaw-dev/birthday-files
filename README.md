@@ -28,7 +28,25 @@ npm run party        # builds, then serves on 0.0.0.0:3000
 | `/admin` | Laptop, private | Run of show, answer key, live tallies, bonus points, message moderation, AI host voice, soundboard, commentary, push-to-talk |
 | `/display` | TV | Lobby + QR, questions, reveal, leaderboard, message wall, cake, finale, host voice and captions |
 | `/play` | Phones | Join, answer, send messages, blow out candles |
-| `/invite` | Shared link | Invitation, countdown, message drop |
+| `/invite` | Shared link | Invitation for Mez's 24th: RSVP, questions, memory, accusation, photo and video, private edit link |
+| `/admin/submissions` | Laptop, private | Review RSVPs and uploads: approve, tag, order, honourable mentions |
+| `/hub` | Organiser | Links to every screen (the bare address `/` sends guests to `/invite`) |
+
+## Preview the invite
+
+```bash
+npm run dev
+```
+
+- Guest view: http://localhost:3000/invite (use your browser's phone emulation, or a phone on the same Wi-Fi via the laptop's address)
+- Host view: http://localhost:3000/admin/submissions (host key: `HOST_KEY`, or `mez-host` in development)
+- Data lands in `.data/invite/` (git-ignored, private). Delete that folder to start fresh.
+
+### Sharing the invite with guests
+
+The invite runs on the laptop, so guests can only reach it on the same network. To collect RSVPs from home before the party it needs a public address. That's a deployment decision, not yet made:
+- **Quick, temporary:** a tunnel from the laptop (e.g. Cloudflare Tunnel) while it's switched on. Free, but the laptop must stay on.
+- **Proper:** Vercel + Supabase (database + private storage bucket + signed upload URLs for videos, since Vercel functions accept only ~4.5 MB uploads). Free tiers suffice; `src/lib/invite/server/store.ts` is the file to swap.
 
 ## AI host
 
@@ -44,7 +62,8 @@ Without keys everything still runs: recorded placeholder clips, a beeping mock v
 
 ```bash
 npm run check        # lint + typecheck + unit tests + production build
-node tests/e2e/full-show.mjs   # browser end-to-end run (needs Playwright + Chromium; build first)
+node tests/e2e/full-show.mjs   # game show in real browsers (needs Playwright + Chromium; build first)
+node tests/e2e/invite.mjs      # invite + moderation in real browsers (also needs ffmpeg)
 ```
 
 ## Docs

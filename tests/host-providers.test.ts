@@ -111,7 +111,7 @@ describe("Azure", () => {
     const ssml = azureSsml('Tom & "Jerry" <3', "bn");
     expect(ssml).toContain("Tom &amp; &quot;Jerry&quot; &lt;3");
     expect(ssml).toContain('xml:lang="bn-BD"');
-    expect(ssml).toContain("bn-BD-PradeepNeural");
+    expect(ssml).toContain("bn-BD-NabanitaNeural");
   });
 
   it("calls the regional REST endpoint and returns MP3", async () => {

@@ -33,7 +33,8 @@ The party is on **21 November 2026**. Re-planned on 16 November around the new r
 - [x] Fixed after live testing: the spoken style prompt, and the Groq default model
 - [x] Rotate through 3 Gemini voice models (free tier: 10 voice lines a day per model)
 - [x] 26 of 46 clips recorded with Gemini voice on 16 Nov
-- [ ] Record the remaining 20 on 17 Nov (`npm run narration:render`), so the party day's quota stays free for live lines
+- [ ] Record the remaining 20 before the party (`npm run narration:render`), so the party day's quota stays free for live lines
+- [x] Default host language is Auto; Azure (Free F0) approved as the unlimited live voice: see the set-up steps in AI_PROVIDERS.md
 - [ ] Native speaker listens to the Bangla clips; adjust the script and re-render the clips that change
 
 ## Milestone 4 — Live push-to-talk ✅
@@ -50,9 +51,23 @@ The party is on **21 November 2026**. Re-planned on 16 November around the new r
 - [ ] With real keys: measure live latency on the venue Wi-Fi; pre-render everything possible
 - [ ] Full rehearsal on the TV with 10+ phones, including pulling the network cable mid-show
 
+## Phase 2, Milestone 6 — Invite portal and moderation ✅
+
+- [x] Invitation for Mez's 24th (21 Nov 2026) that keeps the AI host a surprise; the root URL redirects to `/invite`
+- [x] RSVP: yes / maybe / can't come / can't come but want to take part (remote contributors)
+- [x] Name, relationship, optional gender and prize preference
+- [x] Three host-editable questions, favourite memory, funny accusation
+- [x] Photo (resized, location stripped) and 15–60 s video, permission to show at the party
+- [x] Private edit link; guests can edit or withdraw (deletes their files)
+- [x] Private storage, type checks from file bytes, size and length limits, signed 15-minute media links, rate limits
+- [x] `/admin/submissions`: stats, filters, search, preview, approve/reject, tags, honourable mentions, notes, running order, question editor, delete
+- [x] Tests: 19 API/access tests and a 33-check browser run (phone + laptop)
+- [ ] Fill in the real time and venue in `src/lib/event.ts`
+- [ ] **Hosting decision:** guests need to reach the invite before the party (see README → "Sharing the invite")
+
 ## After the party is safe (not scheduled)
 
-- Supabase (needed only to deploy on Vercel); photo/video uploads; Mez Survey, Mez on Trial, Mez Imposter, Mystery Files; prizes and surprise reveals.
+- Supabase + Vercel hosting; Mez Survey, Mez on Trial, Mez Imposter, Mystery Files (fed by the submissions); prizes and surprise reveals.
 
 ## Suggested order for the next five days
 
