@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "party": "next build && next start -H 0.0.0.0",
+    "party": "node scripts/lib/preflight.mjs 3000 && next build && next start -H 0.0.0.0 -p 3000",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
     "narration:render": "tsx --conditions=react-server scripts/render-narration.ts",
     "host:check": "tsx --conditions=react-server scripts/host-check.ts",

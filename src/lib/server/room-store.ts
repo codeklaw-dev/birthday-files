@@ -7,6 +7,7 @@ import { applyAction, createRoom, freshCake } from "@/lib/game/engine";
 import { defaultPlan } from "@/lib/show/config";
 import { freshShow } from "@/lib/show/engine-show";
 import { guardDataDir, REHEARSAL } from "./rehearsal";
+import { rankLanAddresses } from "./lan";
 import { freshGames } from "@/lib/games/engine-games";
 import type { Action, ActionResult, RoomState } from "@/lib/game/types";
 
@@ -142,9 +143,7 @@ export function isJudgeKey(key: string | null | undefined): boolean {
   return expected.length > 0 && given.length === expected.length && timingSafeEqual(given, expected);
 }
 
+/** Addresses phones can use to reach this laptop, best first (Wi-Fi/Ethernet on a private range). */
 export function lanHosts(): string[] {
-  return Object.values(networkInterfaces())
-    .flat()
-    .filter((n) => n && n.family === "IPv4" && !n.internal)
-    .map((n) => n!.address);
+  return rankLanAddresses(networkInterfaces(), process.env.LAN_HOST);
 }
