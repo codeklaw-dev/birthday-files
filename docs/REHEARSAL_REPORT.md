@@ -39,6 +39,20 @@ Run in a cloud copy of the repo on 18 Nov 2026, headless Chromium, no real devic
 - Phones' QR address prefers Wi-Fi over VPN/VM-bridge addresses (unit test); `LAN_HOST` override (unit test)
 - `npm run rehearsal -- --resume` keeps state across a server restart; a normal start re-seeds fresh fictional data (tested)
 
+### Cloud session check — 18 Nov 2026 (headless browser in a Claude Code cloud container, not a Codespace, not real devices)
+
+| Check | Result |
+| --- | --- |
+| `feat/ai-host` clean and in sync with GitHub | Pass |
+| Dependencies installed; Node 22.23 | Pass |
+| Strong `HOST_KEY` generated into git-ignored `.env.local` (31 chars, never printed) | Pass |
+| `npm run rehearsal -- --build` serves on port 3100 with 8 fictional guests | Pass |
+| `mez-host` rejected by `/api/room/host-check` | Pass |
+| `/admin/show` unlocks with the configured key; rehearsal badge | Pass |
+| `/display` renders the 1920×1080 stage with QR code | Pass |
+| Emulated iPhone 13 joins `/play` and appears on the TV lobby (test player removed afterwards) | Pass |
+| Emulated phone opening `/admin` only sees the key prompt | Pass |
+
 ## Results
 
 Status values: **Not run** · **Pass** · **Fail** · **Partial** · **Skipped**.
