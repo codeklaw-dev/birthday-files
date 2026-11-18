@@ -98,6 +98,7 @@ node tests/e2e/rehearsal.mjs   # show director + finale: TV, dashboard, Mez's ph
 ## Docs
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it fits together and and how the AI host works
+- [docs/PROJECT_HANDOVER.md](docs/PROJECT_HANDOVER.md) — **start here**: status board, decisions, workflow between organiser, developer and director
 - [docs/PARTY_READINESS.md](docs/PARTY_READINESS.md) — audit, getting the invite online safely, backups, risks, what's left
 - [docs/SHOW.md](docs/SHOW.md) — show director, finale, rehearsal mode, offline limits, rehearsal checklist
 - [docs/AI_HOST.md](docs/AI_HOST.md) — the AI host's three modes, guardrails, latency, costs, configuration and demo steps
