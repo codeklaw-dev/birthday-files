@@ -70,9 +70,7 @@ npm run dev
 
 ### Sharing the invite with guests
 
-The invite runs on the laptop, so guests can only reach it on the same network. To collect RSVPs from home before the party it needs a public address. That's a deployment decision, not yet made:
-- **Quick, temporary:** a tunnel from the laptop (e.g. Cloudflare Tunnel) while it's switched on. Free, but the laptop must stay on.
-- **Proper:** Vercel + Supabase (database + private storage bucket + signed upload URLs for videos, since Vercel functions accept only ~4.5 MB uploads). Free tiers suffice; `src/lib/invite/server/store.ts` is the file to swap.
+The invite runs on the laptop, so guests can only reach it on the same network. The recommended way to collect RSVPs from home is a **Cloudflare Tunnel to the laptop**: requests arriving through Cloudflare can only reach the invitation (`src/proxy.ts`). Admin, the TV and the show stay LAN-only. Set-up steps, the comparison with a hosted portal, and the security notes are in [docs/PARTY_READINESS.md](docs/PARTY_READINESS.md#2-getting-the-invitation-online-recommendation). Nothing is exposed until you start the tunnel.
 
 ## AI host
 
@@ -100,6 +98,7 @@ node tests/e2e/rehearsal.mjs   # show director + finale: TV, dashboard, Mez's ph
 ## Docs
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how it fits together and and how the AI host works
+- [docs/PARTY_READINESS.md](docs/PARTY_READINESS.md) — audit, getting the invite online safely, backups, risks, what's left
 - [docs/SHOW.md](docs/SHOW.md) — show director, finale, rehearsal mode, offline limits, rehearsal checklist
 - [docs/AI_HOST.md](docs/AI_HOST.md) — the AI host's three modes, guardrails, latency, costs, configuration and demo steps
 - [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) — cloud AI provider comparison, costs and set-up

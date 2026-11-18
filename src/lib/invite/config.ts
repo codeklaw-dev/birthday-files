@@ -58,7 +58,8 @@ export const LIMITS = {
   accusation: 280,
   question: 140,
   photoBytes: 12 * 1024 * 1024,
-  videoBytes: 150 * 1024 * 1024,
+  /** Kept under Cloudflare's 100 MB request limit so uploads through the tunnel never hit an opaque 413. */
+  videoBytes: 95 * 1024 * 1024,
   videoMinSec: 15,
   videoMaxSec: 60,
   /** Longest edge for photos after in-browser resizing. */

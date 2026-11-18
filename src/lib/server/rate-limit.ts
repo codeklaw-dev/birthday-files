@@ -15,6 +15,10 @@ export function rateLimit(key: string, limit: number, windowMs: number, now = Da
   return true;
 }
 
+/**
+ * Through the Cloudflare Tunnel, Cloudflare's own `cf-connecting-ip` is the
+ * trustworthy client address (a visitor can put anything in X-Forwarded-For).
+ */
 export function clientIp(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "local";
+  return req.headers.get("cf-connecting-ip")?.trim() || req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "local";
 }
