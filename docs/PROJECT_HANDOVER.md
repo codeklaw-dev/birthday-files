@@ -87,4 +87,5 @@ Record answers here with the date: _none yet_.
 
 Newest first. One entry per working session: date, who, what changed (commit), results, open questions.
 
+- **2026-11-18 — Director (cloud session).** Added `scripts/codespace-preview.sh`: one command in the Codespace prints the private preview links (`https://$CODESPACE_NAME-3100.app.github.dev/...`), creates a strong `HOST_KEY` if missing (never printed), and starts rehearsal mode. Tested outside a Codespace with a simulated `CODESPACE_NAME` (links correct, server starts, `/admin/show` 200). **Not yet run inside the real Codespace.**
 - **2026-11-18 — Director (cloud session).** Created this handover. Checked GitHub: `feat/ai-host` at `df34b59`, nothing pushed from the Codespace yet; repository is public; scanned full history — no keys, `.env*` or `.data/` committed. No code changes.
