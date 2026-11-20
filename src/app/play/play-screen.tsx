@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { PartyField, StartOver } from "@/components/party";
 import { GAME_ART } from "@/components/game-art";
-import { cx, HostLine, Leaderboard, TILE } from "@/components/ui";
+import { cx, Leaderboard, TILE } from "@/components/ui";
 import { useNow, usePlayerToken, useStored } from "@/lib/client/hooks";
 import { useRoom, type ConnectionStatus, type RoomConnection } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
@@ -198,10 +198,6 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
       )}
 
       {view.phase === "cake" && <CakePad room={room} view={view} token={token} />}
-
-      <div className="mt-auto rounded-2xl bg-party-ink/45 p-3">
-        <HostLine line={view.hostLine} lang={view.hostLang} />
-      </div>
     </div>
   );
 }

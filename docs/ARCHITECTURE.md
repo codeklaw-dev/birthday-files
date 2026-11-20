@@ -35,7 +35,7 @@ src/
     game/      types.ts, engine.ts, mock-data.ts     rules and data shapes
     server/    room-store.ts                         MOCK backend (in-memory + SSE fan-out)
     client/    use-room.ts, hooks.ts                 the one client seam to the backend
-    casper/    types.ts, mock-adapter.ts, script.ts  Casper adapter contract + silent mock
+    casper/    types.ts, browser-adapter.ts, mock-adapter.ts, script.ts  Casper adapter contract, free browser voice, silent fallback
     event.ts                                         party facts (date, game names)
 tests/engine.test.ts                                 engine unit tests
 ```
@@ -49,7 +49,7 @@ tests/engine.test.ts                                 engine unit tests
 | Media | Not built | Supabase Storage with signed upload URLs | new `lib/server/storage.ts` |
 | Host auth | Shared key in `HOST_KEY`, compared server-side | Supabase Auth (single host account) | `isHostKey()` |
 | Player identity | Random token in `localStorage` | Same token, stored hashed in `players` | none in the UI |
-| Casper | Silent adapter; fixed bilingual script shown as captions | Real STT/TTS pipeline | `lib/casper/index.ts` |
+| Casper | Browser speech synthesis on the TV (free; "Turn on voice" button; Bengali only where the laptop has a Bengali voice); silent mock elsewhere. No captions on the TV | Real STT/TTS pipeline | `lib/casper/index.ts` |
 | Questions | `mock-data.ts`, marked `[Mock]` | `questions` table, edited by the host | `createRoom()` |
 
 **Important limit of the mock:** in-memory state only works when one Node process serves everyone (`next dev`, `next start`). It will not work on Vercel, where each request may hit a different instance. Supabase must be in place before deploying.

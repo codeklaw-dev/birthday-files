@@ -26,7 +26,7 @@ npm run party        # builds, then serves on 0.0.0.0:3000
 | Route | Device | Purpose |
 | --- | --- | --- |
 | `/admin` | Laptop, private | Run of show, answer key, live tallies, bonus points, message moderation, Casper language |
-| `/display` | TV | Lobby + QR, questions, reveal, leaderboard, message wall, cake, finale, Casper captions |
+| `/display` | TV | Lobby + QR, questions, reveal, leaderboard, message wall, cake, finale, Casper's voice (press "Turn on voice" once) |
 | `/play` | Phones | Join, answer, send messages, blow out candles |
 | `/invite` | Shared link | Invitation, countdown, message drop |
 
