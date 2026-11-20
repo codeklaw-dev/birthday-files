@@ -70,3 +70,16 @@ export function useNow(intervalMs = 250): number | null {
   }, [intervalMs]);
   return now;
 }
+
+/** Everything this phone remembers about its guest (invite answers, profile, game identity). */
+const GUEST_KEYS = ["bf.attendance", "bf.profile", "bf.wished", "bf.token"];
+
+/** "Not you?": forget the guest on this phone so someone else can start fresh. */
+export function forgetGuest() {
+  for (const key of GUEST_KEYS) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {}
+  }
+  emit();
+}

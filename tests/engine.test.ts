@@ -118,12 +118,14 @@ describe("host tools", () => {
     expect(err(s, { type: "host/award", playerId: "ghost", delta: 10 })).toMatch(/Unknown/);
   });
 
-  it("only shows approved messages to guests", () => {
-    let s = run(createRoom(), { type: "submitMessage", author: "Nana", text: "Happy birthday!" });
+  it("shows approved wishes on the TV only, never on guests' phones", () => {
+    let s = join(createRoom(), "token-mezzz", "Mez");
+    s = run(s, { type: "submitMessage", author: "Nana", text: "Happy birthday!" });
     expect(viewFor(s, "display", null, 0).messages).toHaveLength(0);
     expect(viewFor(s, "host", null, 0).messages).toHaveLength(1);
     s = run(s, { type: "host/moderate", messageId: s.messages[0].id, status: "approved" });
     expect(viewFor(s, "display", null, 0).messages).toHaveLength(1);
+    expect(viewFor(s, "player", "token-mezzz", 0).messages).toHaveLength(0);
     expect(err(s, { type: "submitMessage", author: "Nana", text: " " })).toMatch(/message/);
   });
 

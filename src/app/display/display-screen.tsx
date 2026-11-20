@@ -1,11 +1,13 @@
 "use client";
 
 import QRCode from "qrcode";
+import { KeyGate } from "@/components/key-gate";
+
 import { mediaSrc } from "@/lib/client/upload";
 import { useEffect, useState } from "react";
 import { cx, HostLine, Leaderboard, Logo, StatusDot, TILE } from "@/components/ui";
 import { getCasper } from "@/lib/casper";
-import { useNow } from "@/lib/client/hooks";
+import { useNow, useStored } from "@/lib/client/hooks";
 import { useRoom } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
 import type { RoomView } from "@/lib/game/types";
@@ -21,8 +23,41 @@ function joinUrlFor(view: RoomView | null): string | null {
   return `${origin}/play`;
 }
 
+/** The TV is locked: wishes appear on it, so only someone with the TV (or host) key can open it. */
 export function DisplayScreen() {
-  const { view, status, clockOffset } = useRoom("display");
+  const [displayKey, setDisplayKey] = useStored("local", "bf.displayKey");
+
+  // If the key changes on the server, a remembered key stops working: ask again.
+  useEffect(() => {
+    if (!displayKey) return;
+    let cancelled = false;
+    fetch("/api/room/display-check", { method: "POST", headers: { "x-host-key": displayKey } })
+      .then((res) => {
+        if (!cancelled && res.status === 401) setDisplayKey(null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [displayKey, setDisplayKey]);
+
+  if (displayKey === undefined) return <main className="stage flex-1" />;
+  if (displayKey === null) {
+    return (
+      <KeyGate
+        title="TV screen"
+        description="Enter the TV key (or the host key). This TV remembers it, so you only do this once."
+        label="TV key"
+        checkUrl="/api/room/display-check"
+        onUnlock={setDisplayKey}
+      />
+    );
+  }
+  return <Stage displayKey={displayKey} />;
+}
+
+function Stage({ displayKey }: { displayKey: string }) {
+  const { view, status, clockOffset } = useRoom("display", { hostKey: displayKey });
   const joinUrl = joinUrlFor(view);
 
   // Hand each new host line to Casper. The mock adapter is silent, so the

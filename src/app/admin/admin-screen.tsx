@@ -2,7 +2,8 @@
 
 import { Check, EyeOff, ExternalLink, Minus, Plus, RotateCcw, UserX } from "lucide-react";
 import { useState } from "react";
-import { Button, cx, Field, HostLine, Logo, StatusDot } from "@/components/ui";
+import { KeyGate } from "@/components/key-gate";
+import { Button, cx, HostLine, Logo, StatusDot } from "@/components/ui";
 import { useNow, useStored } from "@/lib/client/hooks";
 import { mediaSrc } from "@/lib/client/upload";
 import { useRoom, type RoomConnection } from "@/lib/client/use-room";
@@ -12,42 +13,22 @@ import type { HostAction, Phase, RoomView } from "@/lib/game/types";
 export function AdminScreen() {
   const [hostKey, setHostKey] = useStored("session", "bf.hostKey");
   if (hostKey === undefined) return <main className="stage flex-1" />;
-  if (hostKey === null) return <KeyGate onUnlock={setHostKey} />;
-  return <Dashboard hostKey={hostKey} onLock={() => setHostKey(null)} />;
-}
-
-function KeyGate({ onUnlock }: { onUnlock: (key: string) => void }) {
-  const [key, setKey] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  return (
-    <main className="stage grid flex-1 place-items-center px-4">
-      <form
-        className="panel flex w-full max-w-sm flex-col gap-5 p-6"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          const res = await fetch("/api/room/host-check", { method: "POST", headers: { "x-host-key": key } }).catch(() => null);
-          setBusy(false);
-          if (res?.ok) onUnlock(key);
-          else setError(res ? "That key doesn't match." : "Can't reach the server.");
-        }}
-      >
-        <Logo size="sm" />
-        <div>
-          <h1 className="font-display text-2xl font-extrabold">Host dashboard</h1>
-          <p className="mt-1 text-sm text-haze">
+  if (hostKey === null) {
+    return (
+      <KeyGate
+        title="Host dashboard"
+        description={
+          <>
             Enter the host key. In local development the default is <code className="font-mono text-gold">mez-host</code>.
-          </p>
-        </div>
-        <Field label="Host key">
-          <input type="password" required autoFocus value={key} onChange={(e) => setKey(e.target.value)} className="input" autoComplete="current-password" />
-        </Field>
-        {error && <p role="alert" className="text-sm text-stamp">{error}</p>}
-        <Button variant="primary" type="submit" disabled={busy}>{busy ? "Checking…" : "Unlock"}</Button>
-      </form>
-    </main>
-  );
+          </>
+        }
+        label="Host key"
+        checkUrl="/api/room/host-check"
+        onUnlock={setHostKey}
+      />
+    );
+  }
+  return <Dashboard hostKey={hostKey} onLock={() => setHostKey(null)} />;
 }
 
 const PHASE_LABEL: Record<Phase, string> = {

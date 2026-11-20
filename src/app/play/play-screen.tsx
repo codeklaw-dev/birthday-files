@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { PartyField } from "@/components/party";
+import { PartyField, StartOver } from "@/components/party";
 import { GAME_ART } from "@/components/game-art";
 import { cx, HostLine, Leaderboard, TILE } from "@/components/ui";
 import { useNow, usePlayerToken, useStored } from "@/lib/client/hooks";
@@ -150,6 +150,7 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
           <div className="font-mono text-[10px] uppercase tracking-widest text-party-ink/65">points</div>
         </div>
       </div>
+      {view.phase === "lobby" && <StartOver name={me.name} tone="dark" onConfirm={() => {}} />}
 
       {view.phase === "lobby" && (
         <Section

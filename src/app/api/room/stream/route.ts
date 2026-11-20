@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { viewFor } from "@/lib/game/engine";
 import type { Role, RoomState } from "@/lib/game/types";
-import { isHostKey, lanHosts, roomStore } from "@/lib/server/room-store";
+import { isDisplayKey, isHostKey, lanHosts, roomStore } from "@/lib/server/room-store";
 
 /** Server-Sent Events: pushes a role-filtered view on every state change. */
 export async function GET(req: NextRequest) {
@@ -14,6 +14,9 @@ export async function GET(req: NextRequest) {
   }
   if (role === "host" && !isHostKey(params.get("key"))) {
     return Response.json({ error: "Wrong host key." }, { status: 401 });
+  }
+  if (role === "display" && !isDisplayKey(params.get("key"))) {
+    return Response.json({ error: "Wrong TV key." }, { status: 401 });
   }
 
   const encoder = new TextEncoder();

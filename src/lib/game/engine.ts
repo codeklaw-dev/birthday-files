@@ -323,7 +323,8 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
     myAnswer: me ? (state.answers[me.id]?.optionIndex ?? null) : null,
     myGain: me && state.phase === "reveal" ? (state.lastGains[me.id] ?? 0) : null,
     lastGains: state.phase === "reveal" || role === "host" ? state.lastGains : {},
-    messages: role === "host" ? state.messages : state.messages.filter((m) => m.status === "approved"),
+    // Wishes stay off guests' phones: the host sees all, the TV only approved ones.
+    messages: role === "host" ? state.messages : role === "display" ? state.messages.filter((m) => m.status === "approved") : [],
     cake: { candles: state.cake.candles, lit: candlesLit(state.cake) },
     hostLine: state.hostLine,
     hostLang: state.hostLang,

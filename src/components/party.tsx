@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Camera, CheckCircle2, Images, Video, X } from "lucide-react";
+import { forgetGuest } from "@/lib/client/hooks";
 import { preparePhoto, uploadFile } from "@/lib/client/upload";
 import { MAX_MEDIA_PER_WISH, type MediaItem } from "@/lib/game/media";
 import { cx } from "@/components/ui";
@@ -434,5 +435,41 @@ export function PartyField({ label, hint, children }: { label: string; hint?: st
       </span>
       {children}
     </label>
+  );
+}
+
+/** "Not you? Start over" for a shared phone, with a confirmation so it isn't tapped by accident. */
+export function StartOver({ name, onConfirm, tone = "light" }: { name: string; onConfirm: () => void; tone?: "light" | "dark" }) {
+  const [asking, setAsking] = useState(false);
+  const text = tone === "dark" ? "text-white" : "text-party-plum";
+  if (!asking) {
+    return (
+      <button type="button" onClick={() => setAsking(true)} className={cx("mx-auto block text-sm font-semibold underline underline-offset-4", text)}>
+        Not {name}? Start over
+      </button>
+    );
+  }
+  return (
+    <div role="alertdialog" aria-labelledby="start-over-q" className="party-card party-light mx-auto w-full p-4 text-center">
+      <p id="start-over-q" className="font-semibold">
+        Start over as someone new? This phone forgets {name}&apos;s answers. Wishes already sent stay sent.
+      </p>
+      <div className="mt-3 flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            forgetGuest();
+            setAsking(false);
+            onConfirm();
+          }}
+          className="party-pill min-h-10 bg-party-berry px-4 py-1.5 text-base text-white"
+        >
+          Start over
+        </button>
+        <button type="button" onClick={() => setAsking(false)} className="rounded-full px-4 py-1.5 font-semibold text-party-plum hover:bg-party-purple/10">
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }

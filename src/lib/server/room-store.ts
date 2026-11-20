@@ -62,6 +62,16 @@ export function isHostKey(key: string | null | undefined): boolean {
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
+/** The TV screen opens with the host key, or with DISPLAY_KEY so the host key never has to be typed on the TV. */
+export function isDisplayKey(key: string | null | undefined): boolean {
+  if (isHostKey(key)) return true;
+  const display = process.env.DISPLAY_KEY;
+  if (!display) return false;
+  const expected = Buffer.from(display);
+  const given = Buffer.from(key ?? "");
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
 export function lanHosts(): string[] {
   return Object.values(networkInterfaces())
     .flat()

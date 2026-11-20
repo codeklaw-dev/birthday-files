@@ -8,6 +8,7 @@ import {
   Balloons,
   PartyField,
   PhotoPicker,
+  StartOver,
   Streamers,
   WAYS,
   WishForm,
@@ -197,6 +198,18 @@ function GuestFlow({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((
   const go = (next: Step) => setStep(next);
   const back = () => setStep(STEPS[Math.max(0, STEPS.indexOf(step) - 1)]);
   const saveProfile = (patch: Partial<Profile>) => guest.setProfile({ name: savedName, photo, ...patch });
+  const restart = () => {
+    setStep("name");
+    setName(null);
+    setMode(null);
+    setSent(null);
+    setOpen(true);
+  };
+  const startOver = savedName ? (
+    <div className="mt-4">
+      <StartOver name={savedName} onConfirm={restart} />
+    </div>
+  ) : null;
 
   if (!open && step === "name" && !guest.wished) {
     return (
@@ -253,6 +266,7 @@ function GuestFlow({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((
             </button>
           </section>
         )}
+        {startOver}
       </div>
     );
   }
@@ -297,6 +311,7 @@ function GuestFlow({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((
             go("done");
           }}
         />
+        {startOver}
       </div>
     );
   }
@@ -419,6 +434,7 @@ function GuestFlow({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((
           </>
         )}
       </section>
+      {startOver}
     </div>
   );
 }
