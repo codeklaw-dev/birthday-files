@@ -2,36 +2,36 @@ import "server-only";
 import type { Question } from "./types";
 
 /**
- * MOCK CONTENT — placeholder questions so the prototype is playable.
- * Replace with real Mez trivia (eventually loaded from Supabase).
+ * Live party quiz: general birthday trivia (no claims about Mez beyond her
+ * birthday month). Swap in personal Mez trivia whenever you have it.
  */
 export const MOCK_QUESTIONS: Question[] = [
   {
     id: "q1",
-    prompt: "What is Mez most likely to order at 2am?",
-    options: ["Biryani", "Pizza", "Instant noodles", "Just more tea"],
-    correctIndex: 0,
+    prompt: "Mez's birthday is in which month?",
+    options: ["October", "November", "December", "January"],
+    correctIndex: 1,
     seconds: 20,
   },
   {
     id: "q2",
-    prompt: "Which of these would Mez never leave home without?",
-    options: ["Headphones", "Sunglasses", "A phone charger", "Snacks"],
+    prompt: "What is the birthstone for November?",
+    options: ["Ruby", "Emerald", "Topaz", "Pearl"],
     correctIndex: 2,
     seconds: 20,
   },
   {
     id: "q3",
-    prompt: "Mez's reaction to a surprise party is…",
-    options: ["Happy tears", "Suspicious squint", "Instant dance", "\"I knew it!\""],
-    correctIndex: 3,
+    prompt: "The tune of \"Happy Birthday\" was first written as a song called…",
+    options: ["Good Morning to All", "Hello Little Friend", "Sing Along Today", "Cake for Everyone"],
+    correctIndex: 0,
     seconds: 20,
   },
   {
     id: "q4",
-    prompt: "What is Mez's hidden talent?",
-    options: ["Karaoke", "Parallel parking", "Remembering birthdays", "Winning arguments"],
-    correctIndex: 3,
+    prompt: "Which country is usually credited with starting the tradition of candles on birthday cakes?",
+    options: ["France", "Japan", "Germany", "Brazil"],
+    correctIndex: 2,
     seconds: 20,
   },
 ];

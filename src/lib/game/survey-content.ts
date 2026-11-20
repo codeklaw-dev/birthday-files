@@ -3,8 +3,8 @@
  * Their answers become the answer key for "How Well Do You Know Mez?":
  * virtual troopers score by matching what most guests said.
  *
- * SAMPLE CONTENT: replace with the real questions. There are no right
- * answers here, so this file is safe to send to phones.
+ * Opinion questions ("which would Mez pick?"), so they make no claims about
+ * her. There are no right answers here, so this file is safe to send to phones.
  */
 export interface SurveyQuestion {
   id: string;
@@ -15,17 +15,17 @@ export interface SurveyQuestion {
 export const SURVEY_QUESTIONS: SurveyQuestion[] = [
   {
     id: "s1",
-    prompt: "What's Mez's go-to comfort food?",
+    prompt: "Midnight snack: which would Mez pick?",
     options: ["Biryani", "Pizza", "Instant noodles", "Chocolate"],
   },
   {
     id: "s2",
-    prompt: "Where would Mez rather spend a day off?",
+    prompt: "Dream day off: which would Mez pick?",
     options: ["Beach", "Mountains", "Shopping", "Bed, all day"],
   },
   {
     id: "s3",
-    prompt: "What's Mez's best quality?",
-    options: ["Kindness", "Humour", "Loyalty", "Honesty"],
+    prompt: "Birthday treat: which would Mez pick?",
+    options: ["A surprise trip", "A big party", "A cosy dinner", "A shopping spree"],
   },
 ];
