@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { WishComposer, PartyField } from "@/components/party";
 import { cx, HostLine, Leaderboard, TILE } from "@/components/ui";
-import { useNow, usePlayerToken } from "@/lib/client/hooks";
+import { useNow, usePlayerToken, useStored } from "@/lib/client/hooks";
 import { useRoom, type ConnectionStatus, type RoomConnection } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
 import { AVATARS } from "@/lib/game/mock-data";
@@ -48,8 +48,21 @@ function ConnectionPill({ status }: { status: ConnectionStatus }) {
   );
 }
 
+/** Name saved by the invite's "Virtual trooper" profile, if any. */
+function useSavedName(): string {
+  const [raw] = useStored("local", "bf.profile");
+  try {
+    const p = raw ? JSON.parse(raw) : null;
+    return typeof p?.name === "string" ? p.name : "";
+  } catch {
+    return "";
+  }
+}
+
 function JoinForm({ room, token }: { room: RoomConnection; token: string }) {
-  const [name, setName] = useState("");
+  const savedName = useSavedName();
+  const [typed, setName] = useState<string | null>(null);
+  const name = typed ?? savedName;
   const [avatar, setAvatar] = useState<string>(AVATARS[0]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -116,6 +129,8 @@ function JoinForm({ room, token }: { room: RoomConnection; token: string }) {
 function Controller({ room, view, token }: { room: RoomConnection; view: RoomView; token: string }) {
   const me = view.me!;
   const rank = view.players.findIndex((p) => p.id === me.id) + 1;
+  const [attendance] = useStored("local", "bf.attendance");
+  const remote = attendance === "virtual";
   const sendWish = (author: string, text: string) => room.send({ type: "submitMessage", author, text });
 
   return (
@@ -137,7 +152,14 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
       </div>
 
       {view.phase === "lobby" && (
-        <Section title="You're in!" body="Watch the big screen. The show starts when the host is ready. Meanwhile, send Mez a wish.">
+        <Section
+          title="You're in!"
+          body={
+            remote
+              ? "Playing from afar. Keep this page open: the questions appear here when the host starts the show."
+              : "Watch the big screen. The show starts when the host is ready. Meanwhile, send Mez a wish."
+          }
+        >
           <WishComposer defaultAuthor={me.name} onSubmit={sendWish} />
         </Section>
       )}

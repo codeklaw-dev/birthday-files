@@ -225,7 +225,13 @@ function MessageWall({ view }: { view: RoomView }) {
           {notes.map((m, i) => (
             <li key={m.id} className="file-card animate-rise p-6" style={{ rotate: `${((i % 3) - 1) * 1.2}deg` }}>
               <p className="text-2xl font-medium leading-snug">“{m.text}”</p>
-              <p className="mt-3 font-mono text-sm uppercase tracking-[0.2em] text-ink-600">— {m.author}</p>
+              <div className="mt-4 flex items-center gap-3">
+                {m.photo && (
+                  // eslint-disable-next-line @next/next/no-img-element -- inline data URL from the guest's phone
+                  <img src={m.photo} alt="" className="size-12 shrink-0 rounded-full object-cover ring-2 ring-gold" />
+                )}
+                <p className="font-mono text-sm uppercase tracking-[0.2em] text-ink-600">— {m.author}</p>
+              </div>
             </li>
           ))}
         </ul>

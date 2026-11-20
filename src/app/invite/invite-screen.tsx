@@ -2,7 +2,9 @@
 
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
-import { Balloons, Streamers, WishComposer } from "@/components/party";
+import { useState } from "react";
+import { PartyPopper, Wifi } from "lucide-react";
+import { Balloons, ProfileForm, Streamers, WishWays, type Profile } from "@/components/party";
 import { cx } from "@/components/ui";
 import { useNow, useStored } from "@/lib/client/hooks";
 import { EVENT } from "@/lib/event";
@@ -22,18 +24,37 @@ const GAME_ART: Record<string, { src: StaticImageData; alt: string }> = {
   mystery: { src: mysteryBox, alt: "An open box with a question mark" },
 };
 
-const RSVP = {
-  there: { label: "I'll be there", reply: "See you at the party, detective!", tone: "bg-party-green text-white" },
-  virtual: { label: "Virtual trooper", reply: "We'll save you a seat on the stream. Play along from anywhere.", tone: "bg-party-sky text-party-ink" },
-} as const;
-type RsvpChoice = keyof typeof RSVP;
+type Attendance = "party" | "virtual";
 
-async function submitMessage(author: string, text: string) {
+/** What this guest told us, remembered on their phone. */
+function useGuest() {
+  const [attendanceRaw, setAttendance] = useStored("local", "bf.attendance");
+  const [profileRaw, setProfileRaw] = useStored("local", "bf.profile");
+  const [wished, setWished] = useStored("local", "bf.wished");
+  const attendance: Attendance | null = attendanceRaw === "party" || attendanceRaw === "virtual" ? attendanceRaw : null;
+  let profile: Profile | null = null;
+  try {
+    const p = profileRaw ? JSON.parse(profileRaw) : null;
+    if (p && typeof p.name === "string") profile = { name: p.name, photo: typeof p.photo === "string" ? p.photo : null };
+  } catch {}
+  return {
+    attendance,
+    setAttendance: (a: Attendance | null) => setAttendance(a),
+    profile,
+    setProfile: (p: Profile | null) => setProfileRaw(p ? JSON.stringify(p) : null),
+    wished: wished === "1",
+    setWished: () => setWished("1"),
+  };
+}
+
+const scrollToGames = () => document.getElementById("games")?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+async function submitMessage(author: string, text: string, photo: string | null) {
   try {
     const res = await fetch("/api/room/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "submitMessage", author, text }),
+      body: JSON.stringify({ type: "submitMessage", author, text, photo }),
     });
     const body = await res.json().catch(() => ({}));
     return res.ok ? { ok: true } : { ok: false, error: body.error ?? "Something went wrong." };
@@ -80,7 +101,7 @@ function Hero() {
       <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-t-[2.25rem] bg-party-yellow px-5 pb-40 pt-14">
         <Countdown />
         <div className="mt-8 w-full">
-          <WishComposer onSubmit={submitMessage} />
+          <GuestFlow />
         </div>
 
         <Balloons className="absolute -left-4 bottom-0 w-28" />
@@ -129,9 +150,173 @@ function Countdown() {
   );
 }
 
+/** Send wish → "Will you be at the party?" → game flow, or profile + wish + games. */
+function GuestFlow() {
+  const guest = useGuest();
+  const [open, setOpen] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const { attendance, profile } = guest;
+
+  const changeAnswer = (
+    <button
+      type="button"
+      onClick={() => {
+        guest.setAttendance(null);
+        setOpen(true);
+      }}
+      className="mx-auto mt-3 block text-sm font-semibold text-party-plum underline underline-offset-4"
+    >
+      Change my answer
+    </button>
+  );
+
+  if (!attendance) {
+    return (
+      <div className="flex w-full flex-col items-center gap-3">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="attendance"
+          onClick={() => setOpen((o) => !o)}
+          className="party-pill bg-party-green text-white"
+        >
+          Send wish
+        </button>
+        {open && (
+          <section id="attendance" aria-labelledby="attendance-q" className="party-card party-light w-full animate-rise p-5 text-center">
+            <h3 id="attendance-q" className="font-party text-2xl text-party-purple">
+              Will you be at the party?
+            </h3>
+            <p className="mt-1 text-sm text-party-ink/75">{EVENT.dateLabel}</p>
+            <div className="mt-4 flex flex-col gap-3">
+              <ChoiceButton
+                tone="bg-party-green text-white"
+                Icon={PartyPopper}
+                title="I'll be there"
+                body="I'm coming to the party and will play on my phone."
+                onClick={() => guest.setAttendance("party")}
+              />
+              <ChoiceButton
+                tone="bg-party-sky text-party-ink"
+                Icon={Wifi}
+                title="Virtual trooper"
+                body="I can't make it, but I'll send a wish and play from afar."
+                onClick={() => guest.setAttendance("virtual")}
+              />
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  }
+
+  if (attendance === "party") {
+    return (
+      <section className="party-card party-light animate-pop p-6 text-center" aria-labelledby="party-title">
+        <span className="mx-auto grid size-14 place-items-center rounded-full bg-party-green text-white">
+          <PartyPopper aria-hidden className="size-7" />
+        </span>
+        <h3 id="party-title" className="mt-3 font-party text-3xl text-party-purple">
+          See you at the party!
+        </h3>
+        <p className="mt-2 text-party-ink/80">
+          The games run live on the night. Join now to save your detective name, and send {EVENT.guestOfHonour} a wish from the game while you wait.
+        </p>
+        <Link href="/play" className="party-pill mt-5 w-full bg-party-green text-white">
+          Join the game
+        </Link>
+        {changeAnswer}
+      </section>
+    );
+  }
+
+  if (!profile || editingProfile) {
+    return (
+      <div className="animate-rise">
+        <ProfileForm
+          initial={profile}
+          onDone={(p) => {
+            guest.setProfile(p);
+            setEditingProfile(false);
+          }}
+        />
+        {changeAnswer}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3 rounded-full bg-white/70 py-1.5 pl-1.5 pr-4">
+        {profile.photo && (
+          // eslint-disable-next-line @next/next/no-img-element -- local data URL
+          <img src={profile.photo} alt="" className="size-10 rounded-full object-cover" />
+        )}
+        <span className="min-w-0 flex-1 truncate text-left font-semibold">Wishing as {profile.name}</span>
+        <button type="button" onClick={() => setEditingProfile(true)} className="text-sm font-semibold text-party-purple underline underline-offset-4">
+          Edit
+        </button>
+      </div>
+      <WishWays
+        profile={profile}
+        onSubmit={submitMessage}
+        onSent={guest.setWished}
+        sentActions={
+          <button type="button" onClick={scrollToGames} className="party-pill bg-party-green text-white">
+            See tonight&apos;s games
+          </button>
+        }
+      />
+      {!guest.wished && (
+        <button
+          type="button"
+          onClick={() => {
+            guest.setWished();
+            setTimeout(scrollToGames, 50);
+          }}
+          className="mx-auto text-sm font-semibold text-party-plum underline underline-offset-4"
+        >
+          Skip to tonight&apos;s games
+        </button>
+      )}
+      {changeAnswer}
+    </div>
+  );
+}
+
+function ChoiceButton({
+  tone,
+  Icon,
+  title,
+  body,
+  onClick,
+}: {
+  tone: string;
+  Icon: typeof Wifi;
+  title: string;
+  body: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx("flex items-center gap-3 rounded-3xl p-4 text-left shadow-[0_5px_0_rgb(0_0_0/0.18)] transition active:translate-y-1 active:shadow-[0_1px_0_rgb(0_0_0/0.18)]", tone)}
+    >
+      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-white/30">
+        <Icon aria-hidden className="size-6" />
+      </span>
+      <span className="min-w-0">
+        <span className="block font-party text-xl">{title}</span>
+        <span className="block text-sm opacity-90">{body}</span>
+      </span>
+    </button>
+  );
+}
+
 function Summons() {
-  const [stored, setStored] = useStored("local", "bf.rsvp");
-  const rsvp = stored === "there" || stored === "virtual" ? (stored as RsvpChoice) : null;
+  const { attendance, wished } = useGuest();
+  const showGames = attendance === "party" || (attendance === "virtual" && wished);
 
   return (
     <section className="party-stage px-4 pb-14 pt-12 text-center">
@@ -145,48 +330,30 @@ function Summons() {
           best guesses and your worst-kept secrets.
         </p>
 
-        <h3 className="mt-8 font-semibold">Will you make it?</h3>
-        <div className="mt-3 flex flex-wrap justify-center gap-3">
-          {(Object.keys(RSVP) as RsvpChoice[]).map((k) => (
-            <button
-              key={k}
-              type="button"
-              aria-pressed={rsvp === k}
-              onClick={() => setStored(k)}
-              className={cx(
-                "party-pill",
-                RSVP[k].tone,
-                rsvp === k && "ring-4 ring-white",
-                rsvp && rsvp !== k && "opacity-60",
-              )}
-            >
-              {RSVP[k].label}
-            </button>
-          ))}
-        </div>
-        <p aria-live="polite" className="mt-3 min-h-6 font-semibold">
-          {rsvp && RSVP[rsvp].reply}
-        </p>
-
-        {rsvp ? <Games /> : <p className="mt-6 text-white/85">Answer to unlock tonight&apos;s games.</p>}
+        {showGames ? (
+          <Games canPlay={attendance === "virtual"} />
+        ) : (
+          <p className="mt-8 rounded-full bg-party-ink/30 px-5 py-2 font-semibold">
+            {attendance === "virtual" ? "Send your wish to unlock tonight's games." : "Tap Send wish above to unlock tonight's games."}
+          </p>
+        )}
 
         <div className="mt-14 font-party text-5xl leading-tight">
           See you <br /> soon
         </div>
         <div className="mt-6 font-party text-4xl leading-tight text-party-yellow">Thank you</div>
-
-        <Link href="/play" className="party-pill mt-10 bg-party-yellow text-party-ink">
-          At the party? Join the game
-        </Link>
       </div>
     </section>
   );
 }
 
-function Games() {
+function Games({ canPlay }: { canPlay: boolean }) {
   return (
-    <div className="mt-10 w-full">
+    <div id="games" className="mt-10 w-full scroll-mt-6">
       <h3 className="font-party text-3xl">Tonight&apos;s Games</h3>
+      <p className="mt-1 text-white/90">
+        {canPlay ? "Can't be there? Play along from wherever you are." : "You'll play these live at the party."}
+      </p>
       <ul className="mt-6 grid gap-5 sm:grid-cols-2">
         {EVENT.games.map((g, i) => {
           const art = GAME_ART[g.id];
@@ -199,6 +366,11 @@ function Games() {
               {art && <Image src={art.src} alt={art.alt} sizes="160px" className="h-36 w-auto object-contain" />}
               <h4 className="mt-3 font-party text-2xl">{g.name}</h4>
               <p className="mt-1 text-white/90">{g.blurb}</p>
+              {canPlay && (
+                <Link href="/play" aria-label={`Play ${g.name}`} className="party-pill mt-4 bg-party-yellow px-8 text-party-ink">
+                  Play
+                </Link>
+              )}
             </li>
           );
         })}

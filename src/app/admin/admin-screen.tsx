@@ -291,6 +291,10 @@ function Messages({ view, act }: { view: RoomView; act: Act }) {
         <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
           {ordered.map((m) => (
             <li key={m.id} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
+              {m.photo && (
+                // eslint-disable-next-line @next/next/no-img-element -- inline data URL from the guest's phone
+                <img src={m.photo} alt={`${m.author}'s profile picture`} className="size-10 shrink-0 rounded-full object-cover" />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="break-words text-sm">{m.text}</p>
                 <p className="mt-1 font-mono text-xs text-haze">

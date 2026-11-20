@@ -45,6 +45,8 @@ export interface GuestMessage {
   id: string;
   author: string;
   text: string;
+  /** Optional profile picture (small data URL) so the room knows who sent it. */
+  photo?: string;
   status: MessageStatus;
   createdAt: number;
 }
@@ -121,7 +123,7 @@ export type PlayerAction =
   | { type: "join"; token: string; name: string; avatar: string }
   | { type: "answer"; token: string; optionIndex: number }
   | { type: "blow"; token: string }
-  | { type: "submitMessage"; author: string; text: string };
+  | { type: "submitMessage"; author: string; text: string; photo?: string | null };
 
 export type HostAction =
   | { type: "host/start" }

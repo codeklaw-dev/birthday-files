@@ -21,6 +21,8 @@ export const LIMITS = {
   nameLength: 20,
   messageLength: 280,
   maxMessages: 300,
+  /** A guest's profile photo travels inline as a small data URL (the phone shrinks it first). */
+  photoChars: 60_000,
   basePoints: 100,
   speedBonus: 50,
   maxAward: 500,
@@ -51,6 +53,13 @@ export function createRoom(code = "MEZ26"): RoomState {
     hostLang: "both",
     rev: 0,
   };
+}
+
+const PHOTO_DATA_URL = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+/** Accepts only small inline JPEG/PNG/WebP images, never remote URLs. */
+export function isPhotoDataUrl(value: unknown): value is string {
+  return typeof value === "string" && value.length <= LIMITS.photoChars && PHOTO_DATA_URL.test(value);
 }
 
 export function rankPlayers(players: Player[]): Player[] {
@@ -165,7 +174,9 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       if (!author) return fail("Please add your name.");
       if (text.length < 2) return fail("Please write a message.");
       if (state.messages.length >= LIMITS.maxMessages) return fail("The message wall is full.");
-      const message: GuestMessage = { id: ctx.newId(), author, text, status: "pending", createdAt: now };
+      const photo = action.photo ?? undefined;
+      if (photo !== undefined && !isPhotoDataUrl(photo)) return fail("That profile picture couldn't be used. Try another photo.");
+      const message: GuestMessage = { id: ctx.newId(), author, text, status: "pending", createdAt: now, ...(photo && { photo }) };
       return ok({ ...state, messages: [...state.messages, message] });
     }
 

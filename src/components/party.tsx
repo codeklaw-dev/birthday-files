@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, Mic, PenLine, Square, Upload, Video, X } from "lucide-react";
+import { Camera, CheckCircle2, ChevronDown, Mic, PenLine, Square, Upload, Video, X } from "lucide-react";
 import { cx } from "@/components/ui";
 import { EVENT } from "@/lib/event";
 
@@ -71,6 +71,8 @@ export function Streamers({ className }: { className?: string }) {
 
 type Mode = "video" | "upload" | "voice" | "note";
 type Media = { kind: "video" | "image" | "audio"; url: string };
+export type Profile = { name: string; photo: string | null };
+export type WishSubmit = (author: string, text: string, photo: string | null) => Promise<{ ok: boolean; error?: string }>;
 
 const WAYS: { mode: Mode; label: string; hint: string; Icon: typeof Video; tone: string }[] = [
   { mode: "video", label: "Record a video", hint: "Say it to the camera", Icon: Video, tone: "bg-party-pink" },
@@ -79,26 +81,17 @@ const WAYS: { mode: Mode; label: string; hint: string; Icon: typeof Video; tone:
   { mode: "note", label: "Write a note", hint: "A wish, a memory, an inside joke", Icon: PenLine, tone: "bg-party-mint" },
 ];
 
-type Submit = (author: string, text: string) => Promise<{ ok: boolean; error?: string }>;
-
-/**
- * "Send wish" button that opens the ways to wish Mez. Media is captured and
- * previewed on the phone; only the written note is sent until uploads exist
- * (Milestone 4: Supabase Storage).
- */
+/** "Send wish" pill that opens the ways to wish (used on /play). */
 export function WishComposer({
   defaultAuthor = "",
   onSubmit,
   startOpen = false,
 }: {
   defaultAuthor?: string;
-  onSubmit: Submit;
+  onSubmit: WishSubmit;
   startOpen?: boolean;
 }) {
   const [open, setOpen] = useState(startOpen);
-  const [mode, setMode] = useState<Mode | null>(null);
-  const way = WAYS.find((w) => w.mode === mode);
-
   return (
     <div className="flex w-full flex-col items-center gap-3">
       <button
@@ -111,56 +104,167 @@ export function WishComposer({
         Send wish
         <ChevronDown aria-hidden className={cx("size-5 transition-transform", open && "rotate-180")} />
       </button>
-
       {open && (
         <div id="wish-ways" className="w-full animate-rise">
-          {!way ? (
-            <ul className="party-card flex flex-col gap-1 p-2">
-              {WAYS.map((w) => (
-                <li key={w.mode}>
-                  <button
-                    type="button"
-                    onClick={() => setMode(w.mode)}
-                    className="flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition hover:bg-party-purple/10 active:bg-party-purple/15"
-                  >
-                    <span className={cx("grid size-11 shrink-0 place-items-center rounded-full text-party-ink", w.tone)}>
-                      <w.Icon aria-hidden className="size-5" strokeWidth={2.4} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-semibold">{w.label}</span>
-                      <span className="block text-sm text-party-ink/65">{w.hint}</span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <WishForm key={way.mode} way={way} defaultAuthor={defaultAuthor} onSubmit={onSubmit} onBack={() => setMode(null)} />
-          )}
+          <WishWays defaultAuthor={defaultAuthor} onSubmit={onSubmit} />
         </div>
       )}
     </div>
   );
 }
 
+type Sent = { text: string; mediaWord: string | null };
+
+/**
+ * Pick a way to wish, fill it in, then a clear "Wish sent" screen. With a
+ * `profile`, the name is fixed and the photo travels with the message.
+ * Media is captured and previewed on the phone; only the written note is
+ * sent until uploads exist (Milestone 4: Supabase Storage).
+ */
+export function WishWays({
+  profile,
+  defaultAuthor = "",
+  onSubmit,
+  onSent,
+  sentActions,
+}: {
+  profile?: Profile;
+  defaultAuthor?: string;
+  onSubmit: WishSubmit;
+  onSent?: () => void;
+  /** Extra buttons on the confirmation screen, e.g. "See tonight's games". */
+  sentActions?: ReactNode;
+}) {
+  const [mode, setMode] = useState<Mode | null>(null);
+  const [sent, setSent] = useState<Sent | null>(null);
+  const [author, setAuthor] = useState(profile?.name ?? defaultAuthor);
+  const way = WAYS.find((w) => w.mode === mode);
+
+  if (sent) {
+    return (
+      <WishSent
+        sent={sent}
+        author={profile?.name ?? author}
+        photo={profile?.photo ?? null}
+        actions={sentActions}
+        onAnother={() => {
+          setSent(null);
+          setMode(null);
+        }}
+      />
+    );
+  }
+
+  if (!way) {
+    return (
+      <ul className="party-card flex flex-col gap-1 p-2" aria-label="Ways to wish">
+        {WAYS.map((w) => (
+          <li key={w.mode}>
+            <button
+              type="button"
+              onClick={() => setMode(w.mode)}
+              className="flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition hover:bg-party-purple/10 active:bg-party-purple/15"
+            >
+              <span className={cx("grid size-11 shrink-0 place-items-center rounded-full text-party-ink", w.tone)}>
+                <w.Icon aria-hidden className="size-5" strokeWidth={2.4} />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-semibold">{w.label}</span>
+                <span className="block text-sm text-party-ink/65">{w.hint}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <WishForm
+      key={way.mode}
+      way={way}
+      author={author}
+      setAuthor={profile ? null : setAuthor}
+      onSubmit={(text) => onSubmit(profile?.name ?? author, text, profile?.photo ?? null)}
+      onBack={() => setMode(null)}
+      onSent={(s) => {
+        setSent(s);
+        onSent?.();
+      }}
+    />
+  );
+}
+
+function WishSent({
+  sent,
+  author,
+  photo,
+  actions,
+  onAnother,
+}: {
+  sent: Sent;
+  author: string;
+  photo: string | null;
+  actions?: ReactNode;
+  onAnother: () => void;
+}) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  // Move focus (and screen readers) to the confirmation.
+  useEffect(() => heading.current?.focus(), []);
+  return (
+    <section className="party-card party-light flex animate-pop flex-col items-center gap-4 px-5 pb-6 pt-7 text-center" aria-labelledby="wish-sent-title">
+      <span className="grid size-16 place-items-center rounded-full bg-party-mint text-white shadow-[0_5px_0_rgb(0_0_0/0.15)]">
+        <CheckCircle2 aria-hidden className="size-9" strokeWidth={2.4} />
+      </span>
+      <h3 id="wish-sent-title" ref={heading} tabIndex={-1} className="font-party text-3xl text-party-purple outline-none">
+        Wish sent!
+      </h3>
+      <figure className="w-full rounded-2xl bg-party-yellow/70 p-4 text-left">
+        <blockquote className="break-words text-lg font-medium">“{sent.text}”</blockquote>
+        <figcaption className="mt-3 flex items-center gap-2 text-sm font-semibold text-party-ink/75">
+          {photo && (
+            // eslint-disable-next-line @next/next/no-img-element -- local data URL
+            <img src={photo} alt="" className="size-8 rounded-full object-cover" />
+          )}
+          From {author}
+        </figcaption>
+      </figure>
+      <p className="text-party-ink/80">
+        {EVENT.guestOfHonour} will see it on the big screen once the host approves it.
+        {sent.mediaWord && ` Your ${sent.mediaWord} stays on this phone for now, since uploads open soon.`}
+      </p>
+      <div className="flex w-full flex-col gap-2">
+        {actions}
+        <button type="button" onClick={onAnother} className="rounded-full px-4 py-2.5 font-semibold text-party-purple hover:bg-party-purple/10">
+          Send another wish
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function WishForm({
   way,
-  defaultAuthor,
+  author,
+  setAuthor,
   onSubmit,
   onBack,
+  onSent,
 }: {
   way: (typeof WAYS)[number];
-  defaultAuthor: string;
-  onSubmit: Submit;
+  author: string;
+  /** Null when the name comes from a saved profile. */
+  setAuthor: ((v: string) => void) | null;
+  onSubmit: (text: string) => Promise<{ ok: boolean; error?: string }>;
   onBack: () => void;
+  onSent: (s: Sent) => void;
 }) {
-  const [author, setAuthor] = useState(defaultAuthor);
   const [text, setText] = useState("");
   const [media, setMedia] = useState<Media | null>(null);
-  const [state, setState] = useState<{ kind: "idle" | "sending" | "sent" | "error" | "info"; msg?: string }>({ kind: "idle" });
+  const [state, setState] = useState<{ kind: "idle" | "sending" | "error" | "info"; msg?: string }>({ kind: "idle" });
   const max = 280;
   const isNote = way.mode === "note";
-  const mediaWord = media?.kind === "audio" ? "voice message" : media?.kind === "image" ? "photo" : "video";
+  const mediaWord = media ? (media.kind === "audio" ? "voice message" : media.kind === "image" ? "photo" : "video") : null;
 
   // Release object URLs when media is replaced or the form closes.
   useEffect(() => () => {
@@ -177,15 +281,9 @@ function WishForm({
           return;
         }
         setState({ kind: "sending" });
-        const res = await onSubmit(author, text);
-        if (!res.ok) return setState({ kind: "error", msg: res.error ?? "Something went wrong." });
-        setText("");
-        setState({
-          kind: "sent",
-          msg: media
-            ? `Note filed! Your ${mediaWord} stays on this phone for now, since uploads open soon.`
-            : "Filed! It shows on the big screen once the host approves it.",
-        });
+        const res = await onSubmit(text);
+        if (!res.ok) return setState({ kind: "error", msg: res.error ?? "Something went wrong. Try again." });
+        onSent({ text: text.trim(), mediaWord });
       }}
     >
       <div className="flex items-center gap-3">
@@ -202,9 +300,11 @@ function WishForm({
       {way.mode === "upload" && <FilePick accept="image/*,video/*" label="Choose a photo or video" media={media} onMedia={setMedia} />}
       {way.mode === "voice" && <VoiceRecorder media={media} onMedia={setMedia} />}
 
-      <PartyField label="Your name">
-        <input required maxLength={20} value={author} onChange={(e) => setAuthor(e.target.value)} autoComplete="given-name" className="party-input" />
-      </PartyField>
+      {setAuthor && (
+        <PartyField label="Your name">
+          <input required maxLength={20} value={author} onChange={(e) => setAuthor(e.target.value)} autoComplete="given-name" className="party-input" />
+        </PartyField>
+      )}
       <PartyField label={isNote ? `Message for ${EVENT.guestOfHonour}` : "Add a note"} hint={`${text.length}/${max}`}>
         <textarea
           required={isNote}
@@ -221,10 +321,113 @@ function WishForm({
         {state.kind === "sending" ? "Sending…" : "Send to the files"}
       </button>
       <p aria-live="polite" className="min-h-5 text-sm">
-        {state.kind === "sent" && <span className="font-semibold text-party-green">{state.msg}</span>}
         {state.kind === "info" && <span className="text-party-plum">{state.msg}</span>}
         {state.kind === "error" && <span className="font-semibold text-party-berry">{state.msg}</span>}
       </p>
+    </form>
+  );
+}
+
+/* ---------------------------------------------------------------- Profile */
+
+const PHOTO_PX = 192;
+const PHOTO_MAX_CHARS = 55_000; // under the engine's 60k limit
+
+/** Centre-crops a chosen image to a small square JPEG data URL. */
+export async function shrinkPhoto(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new window.Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("unreadable"));
+      el.src = url;
+    });
+    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = PHOTO_PX;
+    const ctx = canvas.getContext("2d");
+    if (!ctx || !side) throw new Error("unreadable");
+    ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, PHOTO_PX, PHOTO_PX);
+    for (const q of [0.82, 0.7, 0.55, 0.4]) {
+      const data = canvas.toDataURL("image/jpeg", q);
+      if (data.length <= PHOTO_MAX_CHARS) return data;
+    }
+    throw new Error("too big");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Name + profile picture for guests joining from afar. */
+export function ProfileForm({ initial, onDone }: { initial: Profile | null; onDone: (p: Profile) => void }) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [photo, setPhoto] = useState<string | null>(initial?.photo ?? null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+
+  return (
+    <form
+      className="party-card party-light flex flex-col items-center gap-4 p-5 text-center"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!photo) return setError("Add a profile picture so everyone knows who's wishing.");
+        onDone({ name: name.trim(), photo });
+      }}
+    >
+      <div>
+        <h3 className="font-party text-2xl text-party-purple">Who&apos;s wishing?</h3>
+        <p className="mt-1 text-sm text-party-ink/75">Your photo shows next to your wish on the big screen, so the room knows it&apos;s you.</p>
+      </div>
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        tabIndex={-1}
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          setBusy(true);
+          setError(null);
+          try {
+            setPhoto(await shrinkPhoto(file));
+          } catch {
+            setError("That photo couldn't be read. Try a different one.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => input.current?.click()}
+        aria-label={photo ? "Change profile picture" : "Add a profile picture"}
+        className="relative grid size-28 place-items-center overflow-hidden rounded-full border-4 border-dashed border-party-purple/40 bg-party-lilac/40 text-party-purple"
+      >
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element -- local data URL
+          <img src={photo} alt="Your profile picture" className="size-full object-cover" />
+        ) : (
+          <Camera aria-hidden className="size-9" />
+        )}
+        <span className="absolute inset-x-0 bottom-0 bg-party-ink/60 py-1 text-xs font-semibold text-white">
+          {busy ? "Loading…" : photo ? "Change" : "Add photo"}
+        </span>
+      </button>
+      <PartyField label="Your name">
+        <input required maxLength={20} value={name} onChange={(e) => setName(e.target.value)} autoComplete="given-name" className="party-input" />
+      </PartyField>
+      {error && (
+        <p role="alert" className="text-sm font-semibold text-party-berry">
+          {error}
+        </p>
+      )}
+      <button type="submit" disabled={busy} className="party-pill w-full bg-party-purple text-white">
+        Continue to my wish
+      </button>
     </form>
   );
 }

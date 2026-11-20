@@ -127,6 +127,17 @@ describe("host tools", () => {
     expect(err(s, { type: "submitMessage", author: "Nana", text: " " })).toMatch(/message/);
   });
 
+  it("keeps a small inline profile photo and refuses anything else", () => {
+    const photo = "data:image/jpeg;base64,/9j/4AAQSkZJRg==";
+    const s = run(createRoom(), { type: "submitMessage", author: "Nana", text: "Happy birthday!", photo });
+    expect(s.messages[0].photo).toBe(photo);
+    const bad = (p: string) => err(createRoom(), { type: "submitMessage", author: "Nana", text: "Hi there", photo: p });
+    expect(bad("https://example.com/me.jpg")).toMatch(/profile picture/);
+    expect(bad("data:image/svg+xml;base64,PHN2Zz4=")).toMatch(/profile picture/);
+    expect(bad(`data:image/png;base64,${"A".repeat(LIMITS.photoChars)}`)).toMatch(/profile picture/);
+    expect(run(createRoom(), { type: "submitMessage", author: "Nana", text: "Hi there", photo: null }).messages[0]).not.toHaveProperty("photo");
+  });
+
   it("kicks a player and frees their token", () => {
     let s = twoPlayers();
     s = run(s, { type: "host/kick", playerId: idOf(s, "token-alice") });
