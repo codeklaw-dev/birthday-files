@@ -1,5 +1,8 @@
 import type { MediaItem } from "./media";
 
+/** Ids of the four games (see EVENT.games). */
+export type SoloGameId = "imposter" | "trial" | "survey" | "mystery";
+
 /**
  * Shared game types. These are transport-agnostic: the same shapes are used by
  * the in-memory mock store today and will map onto Supabase rows/realtime
@@ -34,6 +37,8 @@ export interface Player {
   avatar: string;
   score: number;
   joinedAt: number;
+  /** A virtual trooper, playing from afar. Only they get the at-your-own-pace games. */
+  remote?: boolean;
 }
 
 export interface Answer {
@@ -79,11 +84,47 @@ export interface RoomState {
   lastGains: Record<string, number>;
   messages: GuestMessage[];
   scoreLog: ScoreEvent[];
+  /** Party guests' before-the-party answers, keyed by their phone's secret token. */
+  surveyResponses: Record<string, SurveyResponse>;
+  /** Virtual troopers' finished solo games, keyed by public player id, then game id. */
+  solo: Record<string, Partial<Record<SoloGameId, SoloRecord>>>;
   cake: { candles: number; blows: number; perCandle: number };
   hostLine: Bilingual;
   hostLang: Lang | "both";
   /** Monotonic revision, bumped on every change. */
   rev: number;
+}
+
+export interface SurveyResponse {
+  name: string;
+  /** Chosen option per SURVEY_QUESTIONS entry. */
+  answers: number[];
+  at: number;
+}
+
+export interface SoloRecord {
+  answers: number[];
+  points: number;
+  at: number;
+}
+
+/** A solo game as a virtual trooper's phone receives it: prompts and options, never the answers. */
+export interface SoloGameView {
+  intro: string;
+  scoring: "correct" | "survey" | "verdict";
+  questions: { prompt: string; options: string[] }[];
+}
+
+/** A finished solo game, with the answers revealed. */
+export interface SoloOutcome {
+  answers: number[];
+  points: number;
+  items: {
+    /** The right option, where there is one. */
+    correctIndex: number | null;
+    /** Percentage of guests (survey) or jurors (trial) per option, where it applies. */
+    shares: number[] | null;
+  }[];
 }
 
 export type Role = "host" | "display" | "player";
@@ -119,12 +160,18 @@ export interface RoomView {
   cake: { candles: number; lit: number };
   hostLine: Bilingual;
   hostLang: Lang | "both";
+  /** Virtual troopers only: the at-your-own-pace games and their results so far. */
+  solo: { games: Record<SoloGameId, SoloGameView>; results: Partial<Record<SoloGameId, SoloOutcome>> } | null;
+  /** Host only: how party guests answered the before-the-party questions. */
+  survey: { responses: number; tallies: number[][] } | null;
   /** LAN hints so the display can render a QR code phones can reach. */
   lanHosts?: string[];
 }
 
 export type PlayerAction =
-  | { type: "join"; token: string; name: string; avatar: string }
+  | { type: "join"; token: string; name: string; avatar: string; remote?: boolean }
+  | { type: "survey/submit"; token: string; name: string; answers: number[] }
+  | { type: "solo/submit"; token: string; game: SoloGameId; answers: number[] }
   | { type: "answer"; token: string; optionIndex: number }
   | { type: "blow"; token: string }
   | { type: "submitMessage"; author: string; text: string; photo?: string | null; media?: MediaItem[] | null };

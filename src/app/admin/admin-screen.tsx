@@ -8,6 +8,7 @@ import { useNow, useStored } from "@/lib/client/hooks";
 import { mediaSrc } from "@/lib/client/upload";
 import { useRoom, type RoomConnection } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
+import { SURVEY_QUESTIONS } from "@/lib/game/survey-content";
 import type { HostAction, Phase, RoomView } from "@/lib/game/types";
 
 export function AdminScreen() {
@@ -78,6 +79,7 @@ function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void })
           </div>
           <div className="flex min-w-0 flex-col gap-4">
             <Players view={view} act={act} />
+            <SurveyResults view={view} />
             <Roadmap />
           </div>
         </div>
@@ -223,6 +225,7 @@ function Players({ view, act }: { view: RoomView; act: Act }) {
               <span className="w-5 font-mono text-xs text-haze">{i + 1}</span>
               <span aria-hidden>{p.avatar}</span>
               <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
+              {p.remote && <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-haze">virtual</span>}
               <span className="font-mono font-bold tabular-nums">{p.score}</span>
               <IconButton label={`Take 50 points from ${p.name}`} onClick={() => act({ type: "host/award", playerId: p.id, delta: -50, reason: "Mez's verdict" })}>
                 <Minus className="size-4" />
@@ -244,6 +247,38 @@ function Players({ view, act }: { view: RoomView; act: Act }) {
         </ul>
       )}
       <p className="mt-3 text-xs text-haze">± buttons are Mez&apos;s bonus points. Every change is written to the score log.</p>
+    </Card>
+  );
+}
+
+/** How party guests answered the before-the-party questions (the answer key for the survey game). */
+function SurveyResults({ view }: { view: RoomView }) {
+  if (!view.survey) return null;
+  const { responses, tallies } = view.survey;
+  return (
+    <Card title="Before-the-party answers" aside={<span className="font-mono text-xs text-haze">{responses} guests</span>}>
+      {responses === 0 ? (
+        <p className="text-sm text-haze">No answers yet. Party guests answer after sending their wish on the invite.</p>
+      ) : (
+        <ol className="flex flex-col gap-4">
+          {SURVEY_QUESTIONS.map((q, i) => {
+            const max = Math.max(...tallies[i]);
+            return (
+              <li key={q.id}>
+                <p className="text-sm font-semibold">{q.prompt}</p>
+                <ul className="mt-1 flex flex-col gap-1">
+                  {q.options.map((opt, o) => (
+                    <li key={o} className={cx("flex justify-between text-sm", tallies[i][o] === max && max > 0 ? "text-gold" : "text-haze")}>
+                      <span>{opt}</span>
+                      <span className="font-mono tabular-nums">{tallies[i][o]}</span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </Card>
   );
 }

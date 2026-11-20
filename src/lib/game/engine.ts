@@ -1,6 +1,8 @@
 import { SCRIPT } from "@/lib/casper/script";
 import { isMediaItem, MAX_MEDIA_PER_WISH } from "./media";
 import { MOCK_QUESTIONS } from "./mock-data";
+import { SOLO_GAMES, SOLO_POINTS } from "./solo-content";
+import { SURVEY_QUESTIONS } from "./survey-content";
 import type {
   Action,
   ActionResult,
@@ -9,6 +11,8 @@ import type {
   Role,
   RoomState,
   RoomView,
+  SoloGameId,
+  SoloOutcome,
 } from "./types";
 
 /**
@@ -22,6 +26,7 @@ export const LIMITS = {
   nameLength: 20,
   messageLength: 280,
   maxMessages: 300,
+  maxSurveyResponses: 300,
   /** A guest's profile photo travels inline as a small data URL (the phone shrinks it first). */
   photoChars: 60_000,
   basePoints: 100,
@@ -49,6 +54,8 @@ export function createRoom(code = "MEZ26"): RoomState {
     lastGains: {},
     messages: [],
     scoreLog: [],
+    surveyResponses: {},
+    solo: {},
     cake: { candles: LIMITS.candles, blows: 0, perCandle: 3 },
     hostLine: SCRIPT.lobby,
     hostLang: "both",
@@ -134,10 +141,13 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
         state.players.some((p) => p.id !== existingId && p.name.toLowerCase() === n.toLowerCase());
       let unique = name;
       for (let i = 2; taken(unique); i++) unique = `${name.slice(0, LIMITS.nameLength - 2)} ${i}`;
+      const remote = action.remote === true;
       if (existingId) {
         return ok({
           ...state,
-          players: state.players.map((p) => (p.id === existingId ? { ...p, name: unique, avatar } : p)),
+          players: state.players.map((p) =>
+            p.id === existingId ? { ...p, name: unique, avatar, ...((remote || p.remote) && { remote: true }) } : p,
+          ),
         });
       }
       if (state.players.length >= LIMITS.maxPlayers) return fail("The room is full.");
@@ -145,7 +155,7 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       return ok({
         ...state,
         tokens: { ...state.tokens, [token]: id },
-        players: [...state.players, { id, name: unique, avatar, score: 0, joinedAt: now }],
+        players: [...state.players, { id, name: unique, avatar, score: 0, joinedAt: now, ...(remote && { remote: true }) }],
       });
     }
 
@@ -167,6 +177,42 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       if (candlesLit(state.cake) === 0) return fail("The candles are already out.");
       const cake = { ...state.cake, blows: state.cake.blows + 1 };
       return ok({ ...state, cake, hostLine: candlesLit(cake) === 0 ? SCRIPT.cakeDone : state.hostLine });
+    }
+
+    case "survey/submit": {
+      const token = clean(action.token, 64);
+      const name = clean(action.name, LIMITS.nameLength);
+      if (token.length < 8) return fail("Invalid player token.");
+      if (!name) return fail("Please add your name.");
+      if (!validAnswers(action.answers, SURVEY_QUESTIONS.map((q) => q.options.length))) return fail("Please answer every question.");
+      if (!state.surveyResponses[token] && Object.keys(state.surveyResponses).length >= LIMITS.maxSurveyResponses) {
+        return fail("We already have plenty of answers. Thank you!");
+      }
+      return ok({
+        ...state,
+        surveyResponses: { ...state.surveyResponses, [token]: { name, answers: [...action.answers], at: now } },
+      });
+    }
+
+    case "solo/submit": {
+      const playerId = state.tokens[action.token];
+      const player = state.players.find((p) => p.id === playerId);
+      if (!player) return fail("Join the game first.");
+      if (!player.remote) return fail("This game is played live at the party.");
+      const game = SOLO_GAMES[action.game];
+      if (!game || !Object.hasOwn(SOLO_GAMES, action.game)) return fail("Unknown game.");
+      if (state.solo[player.id]?.[action.game]) return fail("You've already played this one.");
+      if (!validAnswers(action.answers, game.questions.map((q) => q.options.length))) return fail("Please answer every question.");
+      const points = soloPoints(state, action.game, action.answers);
+      return ok({
+        ...state,
+        players: state.players.map((p) => (p.id === player.id ? { ...p, score: p.score + points } : p)),
+        solo: {
+          ...state.solo,
+          [player.id]: { ...state.solo[player.id], [action.game]: { answers: [...action.answers], points, at: now } },
+        },
+        scoreLog: points ? [...state.scoreLog, { playerId: player.id, delta: points, reason: `solo:${action.game}`, at: now }] : state.scoreLog,
+      });
     }
 
     case "submitMessage": {
@@ -238,8 +284,11 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
         ...fresh,
         rev: state.rev,
         tokens: state.tokens,
-        players: state.players.map((p) => ({ ...p, score: 0 })),
+        // Points from at-your-own-pace games were earned before the show; keep them.
+        players: state.players.map((p) => ({ ...p, score: soloTotal(state, p.id) })),
         messages: state.messages,
+        surveyResponses: state.surveyResponses,
+        solo: state.solo,
         hostLang: state.hostLang,
       });
     }
@@ -290,6 +339,71 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
   }
 }
 
+function validAnswers(answers: unknown, optionCounts: number[]): answers is number[] {
+  return (
+    Array.isArray(answers) &&
+    answers.length === optionCounts.length &&
+    answers.every((a, i) => Number.isInteger(a) && a >= 0 && a < optionCounts[i])
+  );
+}
+
+/** How many party guests picked each option, per before-the-party question. */
+function surveyTallies(state: RoomState): number[][] {
+  const tallies = SURVEY_QUESTIONS.map((q) => q.options.map(() => 0));
+  for (const r of Object.values(state.surveyResponses)) r.answers.forEach((a, i) => tallies[i] && tallies[i][a]++);
+  return tallies;
+}
+
+/** How the virtual jury has voted on each charge so far. */
+function trialTallies(state: RoomState): number[][] {
+  const tallies = SOLO_GAMES.trial.questions.map((q) => q.options.map(() => 0));
+  for (const games of Object.values(state.solo)) games.trial?.answers.forEach((a, i) => tallies[i] && tallies[i][a]++);
+  return tallies;
+}
+
+const percentages = (counts: number[]) => {
+  const total = counts.reduce((a, b) => a + b, 0);
+  return counts.map((c) => (total ? Math.round((c / total) * 100) : 0));
+};
+
+function soloPoints(state: RoomState, game: SoloGameId, answers: number[]): number {
+  const g = SOLO_GAMES[game];
+  if (g.scoring === "verdict") return answers.length * SOLO_POINTS.verdict;
+  if (g.scoring === "correct") return answers.filter((a, i) => a === g.questions[i].correctIndex).length * SOLO_POINTS.correct;
+  // Survey: points in proportion to how many party guests gave the same answer.
+  const tallies = surveyTallies(state);
+  return answers.reduce((sum, a, i) => {
+    const total = tallies[i].reduce((x, y) => x + y, 0);
+    return sum + (total ? Math.round((tallies[i][a] / total) * SOLO_POINTS.surveyMax) : SOLO_POINTS.surveyNoData);
+  }, 0);
+}
+
+function soloTotal(state: RoomState, playerId: string): number {
+  return Object.values(state.solo[playerId] ?? {}).reduce((sum, r) => sum + (r?.points ?? 0), 0);
+}
+
+function soloView(state: RoomState, playerId: string): RoomView["solo"] {
+  const games = Object.fromEntries(
+    (Object.keys(SOLO_GAMES) as SoloGameId[]).map((id) => {
+      const g = SOLO_GAMES[id];
+      return [id, { intro: g.intro, scoring: g.scoring, questions: g.questions.map(({ prompt, options }) => ({ prompt, options })) }];
+    }),
+  ) as Record<SoloGameId, NonNullable<RoomView["solo"]>["games"][SoloGameId]>;
+  const results: Partial<Record<SoloGameId, SoloOutcome>> = {};
+  const mine = state.solo[playerId] ?? {};
+  for (const id of Object.keys(mine) as SoloGameId[]) {
+    const rec = mine[id]!;
+    const g = SOLO_GAMES[id];
+    const tallies = g.scoring === "survey" ? surveyTallies(state) : g.scoring === "verdict" ? trialTallies(state) : null;
+    results[id] = {
+      answers: rec.answers,
+      points: rec.points,
+      items: g.questions.map((q, i) => ({ correctIndex: q.correctIndex, shares: tallies ? percentages(tallies[i]) : null })),
+    };
+  }
+  return { games, results };
+}
+
 /** Project the authoritative state into what one client may see. */
 export function viewFor(state: RoomState, role: Role, token: string | null, now: number): RoomView {
   const meId = token ? state.tokens[token] : undefined;
@@ -325,6 +439,8 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
     lastGains: state.phase === "reveal" || role === "host" ? state.lastGains : {},
     // Wishes stay off guests' phones: the host sees all, the TV only approved ones.
     messages: role === "host" ? state.messages : role === "display" ? state.messages.filter((m) => m.status === "approved") : [],
+    solo: role === "player" && me?.remote ? soloView(state, me.id) : null,
+    survey: role === "host" ? { responses: Object.keys(state.surveyResponses).length, tallies: surveyTallies(state) } : null,
     cake: { candles: state.cake.candles, lit: candlesLit(state.cake) },
     hostLine: state.hostLine,
     hostLang: state.hostLang,
