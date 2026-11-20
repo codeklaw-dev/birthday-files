@@ -1,4 +1,5 @@
 import { SCRIPT } from "@/lib/casper/script";
+import { isMediaItem, MAX_MEDIA_PER_WISH } from "./media";
 import { MOCK_QUESTIONS } from "./mock-data";
 import type {
   Action,
@@ -21,6 +22,8 @@ export const LIMITS = {
   nameLength: 20,
   messageLength: 280,
   maxMessages: 300,
+  /** A guest's profile photo travels inline as a small data URL (the phone shrinks it first). */
+  photoChars: 60_000,
   basePoints: 100,
   speedBonus: 50,
   maxAward: 500,
@@ -51,6 +54,13 @@ export function createRoom(code = "MEZ26"): RoomState {
     hostLang: "both",
     rev: 0,
   };
+}
+
+const PHOTO_DATA_URL = /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+/** Accepts only small inline JPEG/PNG/WebP images, never remote URLs. */
+export function isPhotoDataUrl(value: unknown): value is string {
+  return typeof value === "string" && value.length <= LIMITS.photoChars && PHOTO_DATA_URL.test(value);
 }
 
 export function rankPlayers(players: Player[]): Player[] {
@@ -163,9 +173,15 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       const author = clean(action.author, LIMITS.nameLength);
       const text = clean(action.text, LIMITS.messageLength);
       if (!author) return fail("Please add your name.");
-      if (text.length < 2) return fail("Please write a message.");
+      const media = action.media ?? [];
+      if (!Array.isArray(media) || media.length > MAX_MEDIA_PER_WISH || !media.every(isMediaItem)) {
+        return fail("Those photos or videos couldn't be attached. Try uploading them again.");
+      }
+      if (media.length === 0 && text.length < 2) return fail("Please write a message.");
       if (state.messages.length >= LIMITS.maxMessages) return fail("The message wall is full.");
-      const message: GuestMessage = { id: ctx.newId(), author, text, status: "pending", createdAt: now };
+      const photo = action.photo ?? undefined;
+      if (photo !== undefined && !isPhotoDataUrl(photo)) return fail("That profile picture couldn't be used. Try another photo.");
+      const message: GuestMessage = { id: ctx.newId(), author, text, status: "pending", createdAt: now, ...(photo && { photo }), ...(media.length > 0 && { media: media.map(({ kind, url }) => ({ kind, url })) }) };
       return ok({ ...state, messages: [...state.messages, message] });
     }
 
@@ -307,7 +323,8 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
     myAnswer: me ? (state.answers[me.id]?.optionIndex ?? null) : null,
     myGain: me && state.phase === "reveal" ? (state.lastGains[me.id] ?? 0) : null,
     lastGains: state.phase === "reveal" || role === "host" ? state.lastGains : {},
-    messages: role === "host" ? state.messages : state.messages.filter((m) => m.status === "approved"),
+    // Wishes stay off guests' phones: the host sees all, the TV only approved ones.
+    messages: role === "host" ? state.messages : role === "display" ? state.messages.filter((m) => m.status === "approved") : [],
     cake: { candles: state.cake.candles, lit: candlesLit(state.cake) },
     hostLine: state.hostLine,
     hostLang: state.hostLang,

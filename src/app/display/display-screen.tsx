@@ -1,10 +1,13 @@
 "use client";
 
 import QRCode from "qrcode";
+import { KeyGate } from "@/components/key-gate";
+
+import { mediaSrc } from "@/lib/client/upload";
 import { useEffect, useState } from "react";
 import { cx, HostLine, Leaderboard, Logo, StatusDot, TILE } from "@/components/ui";
 import { getCasper } from "@/lib/casper";
-import { useNow } from "@/lib/client/hooks";
+import { useNow, useStored } from "@/lib/client/hooks";
 import { useRoom } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
 import type { RoomView } from "@/lib/game/types";
@@ -20,8 +23,41 @@ function joinUrlFor(view: RoomView | null): string | null {
   return `${origin}/play`;
 }
 
+/** The TV is locked: wishes appear on it, so only someone with the TV (or host) key can open it. */
 export function DisplayScreen() {
-  const { view, status, clockOffset } = useRoom("display");
+  const [displayKey, setDisplayKey] = useStored("local", "bf.displayKey");
+
+  // If the key changes on the server, a remembered key stops working: ask again.
+  useEffect(() => {
+    if (!displayKey) return;
+    let cancelled = false;
+    fetch("/api/room/display-check", { method: "POST", headers: { "x-host-key": displayKey } })
+      .then((res) => {
+        if (!cancelled && res.status === 401) setDisplayKey(null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [displayKey, setDisplayKey]);
+
+  if (displayKey === undefined) return <main className="stage flex-1" />;
+  if (displayKey === null) {
+    return (
+      <KeyGate
+        title="TV screen"
+        description="Enter the TV key (or the host key). This TV remembers it, so you only do this once."
+        label="TV key"
+        checkUrl="/api/room/display-check"
+        onUnlock={setDisplayKey}
+      />
+    );
+  }
+  return <Stage displayKey={displayKey} />;
+}
+
+function Stage({ displayKey }: { displayKey: string }) {
+  const { view, status, clockOffset } = useRoom("display", { hostKey: displayKey });
   const joinUrl = joinUrlFor(view);
 
   // Hand each new host line to Casper. The mock adapter is silent, so the
@@ -172,6 +208,7 @@ function QuestionBoard({ view, clockOffset }: { view: RoomView; clockOffset: num
 
       <ul className="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-2">
         {q.options.map((opt, i) => {
+          const { Icon } = TILE[i % 4];
           const correct = revealed && q.correctIndex === i;
           const count = q.tally?.[i] ?? 0;
           return (
@@ -184,7 +221,7 @@ function QuestionBoard({ view, clockOffset }: { view: RoomView; clockOffset: num
                 correct && "animate-pop ring-8 ring-cream",
               )}
             >
-              <span aria-hidden className="text-3xl">{TILE[i % 4].glyph}</span>
+              <Icon aria-hidden className="size-10 shrink-0" fill="currentColor" strokeWidth={2} />
               <span className="min-w-0 flex-1">{opt}</span>
               {revealed && (
                 <span className="font-mono text-2xl tabular-nums">
@@ -223,8 +260,26 @@ function MessageWall({ view }: { view: RoomView }) {
         <ul className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-5 overflow-hidden md:grid-cols-2 xl:grid-cols-3">
           {notes.map((m, i) => (
             <li key={m.id} className="file-card animate-rise p-6" style={{ rotate: `${((i % 3) - 1) * 1.2}deg` }}>
-              <p className="text-2xl font-medium leading-snug">“{m.text}”</p>
-              <p className="mt-3 font-mono text-sm uppercase tracking-[0.2em] text-ink-600">— {m.author}</p>
+              {m.media && m.media.length > 0 && (
+                <div className={cx("mb-4 grid gap-2", m.media.length > 1 && "grid-cols-2")}>
+                  {m.media.slice(0, 4).map((x) =>
+                    x.kind === "video" ? (
+                      <video key={x.url} src={mediaSrc(x.url)} autoPlay muted loop playsInline className="max-h-56 w-full rounded-lg bg-black object-cover" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element -- guest upload served by our API
+                      <img key={x.url} src={mediaSrc(x.url)} alt="" className="max-h-56 w-full rounded-lg object-cover" />
+                    ),
+                  )}
+                </div>
+              )}
+              {m.text && <p className="text-2xl font-medium leading-snug">“{m.text}”</p>}
+              <div className="mt-4 flex items-center gap-3">
+                {m.photo && (
+                  // eslint-disable-next-line @next/next/no-img-element -- inline data URL from the guest's phone
+                  <img src={m.photo} alt="" className="size-12 shrink-0 rounded-full object-cover ring-2 ring-gold" />
+                )}
+                <p className="font-mono text-sm uppercase tracking-[0.2em] text-ink-600">— {m.author}</p>
+              </div>
             </li>
           ))}
         </ul>

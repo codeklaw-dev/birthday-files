@@ -8,8 +8,8 @@ export const EVENT = {
   dateLabel: "Saturday 21 November 2026",
   games: [
     { id: "imposter", name: "Mez Imposter", blurb: "One of you is faking it. Spot the imposter." },
-    { id: "survey", name: "Mez Survey", blurb: "We asked the guests. Guess the top answers." },
     { id: "trial", name: "Mez on Trial", blurb: "Charges are read. The jury is your phones." },
+    { id: "survey", name: "How Well Do You Know Mez?", blurb: "We asked the guests. Guess the top answers." },
     { id: "mystery", name: "Mystery Files", blurb: "Photos, clues and memories. Whose file is it?" },
   ],
 } as const;

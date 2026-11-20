@@ -5,6 +5,7 @@
   --font-display: var(--font-display), var(--font-bangla), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-bangla: var(--font-bangla), system-ui, sans-serif;
+  --font-party: var(--font-party), var(--font-bangla), Georgia, serif;
 
   /* Stage */
   --color-ink-950: #0a0818;
@@ -21,11 +22,27 @@
   /* Semantic */
   --color-stamp: #ff5470;
   --color-go: #4ade80;
-  /* Answer tiles */
-  --color-tile-a: #ff5470;
-  --color-tile-b: #4d9dff;
-  --color-tile-c: #f6c453;
-  --color-tile-d: #3ddc97;
+  /* Answer tiles: bright, shared by phones and the TV so guests can match them */
+  --color-tile-a: #ff4f81;
+  --color-tile-b: #23aae1;
+  --color-tile-c: #ffc93c;
+  --color-tile-d: #2bc48a;
+
+  /* Party palette for the guest screens (/invite, /play), sampled from the Canva redesign */
+  --color-party-purple: #9e48aa;
+  --color-party-plum: #5e1f6b;
+  --color-party-ink: #2b1233;
+  --color-party-yellow: #fff791;
+  --color-party-sun: #ffc93c;
+  --color-party-lilac: #e0a1e6;
+  --color-party-green: #2a634e;
+  --color-party-sky: #23aae1;
+  --color-party-pink: #ff4f81;
+  --color-party-berry: #d61f5c;
+  --color-party-mint: #2bc48a;
+
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-sway: sway 6s ease-in-out infinite;
 
   --animate-pop: pop 0.25s ease-out both;
   --animate-rise: rise 0.35s ease-out both;
@@ -48,6 +65,13 @@
 }
 @keyframes bulbs {
   50% { opacity: 0.35; }
+}
+@keyframes float {
+  50% { transform: translateY(-10px) rotate(-2deg); }
+}
+@keyframes sway {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
 }
 @keyframes drift {
   from { transform: translateY(0) rotate(0deg); opacity: 0; }
@@ -156,4 +180,81 @@ body {
 }
 .input::placeholder {
   color: rgb(185 179 217 / 0.6);
+}
+
+/* ---------- Party theme: the bright guest screens (/invite, /play) ---------- */
+
+.font-party {
+  font-family: var(--font-party);
+  font-weight: 800;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  letter-spacing: -0.01em;
+}
+
+/* Purple backdrop with a scatter of confetti dots */
+.party-stage {
+  background-color: var(--color-party-purple);
+  background-image:
+    radial-gradient(circle at 12% 18%, rgb(255 247 145 / 0.9) 0 3px, transparent 4px),
+    radial-gradient(circle at 82% 9%, rgb(35 170 225 / 0.9) 0 3px, transparent 4px),
+    radial-gradient(circle at 64% 42%, rgb(255 79 129 / 0.85) 0 2.5px, transparent 3.5px),
+    radial-gradient(circle at 28% 71%, rgb(43 196 138 / 0.85) 0 3px, transparent 4px),
+    radial-gradient(circle at 91% 83%, rgb(255 201 60 / 0.9) 0 2.5px, transparent 3.5px),
+    radial-gradient(120% 70% at 50% -10%, rgb(255 255 255 / 0.18), transparent 60%);
+  background-size: 220px 220px, 260px 260px, 180px 180px, 240px 240px, 200px 200px, 100% 100%;
+  color: #fff;
+}
+
+.party-card {
+  background: #fff;
+  color: var(--color-party-ink);
+  border-radius: 1.75rem;
+  box-shadow: 0 14px 30px -14px rgb(43 18 51 / 0.55);
+}
+
+.party-input {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 2px solid #ead3ee;
+  background: #fff;
+  padding: 0.65rem 0.9rem;
+  font-size: 1rem; /* 16px: stops iOS zooming on focus */
+  color: var(--color-party-ink);
+  transition: border-color 150ms;
+}
+.party-input:focus {
+  border-color: var(--color-party-purple);
+  outline: none;
+}
+.party-input::placeholder {
+  color: rgb(43 18 51 / 0.45);
+}
+
+/* Chunky pill button with a pressable bottom edge */
+.party-pill {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.6rem 1.6rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  box-shadow: 0 5px 0 0 rgb(0 0 0 / 0.22);
+  transition: transform 120ms, box-shadow 120ms, opacity 150ms;
+}
+.party-pill:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 0 rgb(0 0 0 / 0.22);
+}
+.party-pill:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Gold focus rings vanish on white and yellow; use ink there. */
+.party-card :focus-visible,
+.party-light :focus-visible {
+  outline-color: var(--color-party-ink);
 }

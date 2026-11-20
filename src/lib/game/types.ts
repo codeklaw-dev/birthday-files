@@ -1,3 +1,5 @@
+import type { MediaItem } from "./media";
+
 /**
  * Shared game types. These are transport-agnostic: the same shapes are used by
  * the in-memory mock store today and will map onto Supabase rows/realtime
@@ -45,6 +47,10 @@ export interface GuestMessage {
   id: string;
   author: string;
   text: string;
+  /** Optional profile picture (small data URL) so the room knows who sent it. */
+  photo?: string;
+  /** Photos or a video the guest uploaded with the wish. */
+  media?: MediaItem[];
   status: MessageStatus;
   createdAt: number;
 }
@@ -121,7 +127,7 @@ export type PlayerAction =
   | { type: "join"; token: string; name: string; avatar: string }
   | { type: "answer"; token: string; optionIndex: number }
   | { type: "blow"; token: string }
-  | { type: "submitMessage"; author: string; text: string };
+  | { type: "submitMessage"; author: string; text: string; photo?: string | null; media?: MediaItem[] | null };
 
 export type HostAction =
   | { type: "host/start" }
