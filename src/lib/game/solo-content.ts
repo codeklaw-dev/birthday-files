@@ -4,7 +4,7 @@ import { SURVEY_QUESTIONS } from "./survey-content";
 /**
  * Games virtual troopers play at their own pace from the invite.
  *
- * SAMPLE CONTENT: replace every [Sample] line with real Mez material.
+ * SAMPLE CONTENT: replace these questions with real Mez material.
  * This file holds the answers, so it stays on the server: phones only ever
  * receive the prompts and options (see viewFor in engine.ts).
  */
@@ -33,17 +33,17 @@ export const SOLO_GAMES: Record<SoloGameId, SoloGame> = {
     intro: "Three statements about Mez. One of them is an imposter. Spot the fake.",
     questions: [
       {
-        prompt: "[Sample] Which of these is NOT true about Mez?",
+        prompt: "Which of these is NOT true about Mez?",
         options: ["She loves rainy days", "She has never seen snow", "She can't whistle", "She hates chocolate"],
         correctIndex: 3,
       },
       {
-        prompt: "[Sample] Spot the imposter fact.",
+        prompt: "Spot the imposter fact.",
         options: ["She learned to swim at 25", "She once met a celebrity", "She can't stand spicy food", "She sings in the shower"],
         correctIndex: 2,
       },
       {
-        prompt: "[Sample] One of these never happened. Which?",
+        prompt: "One of these never happened. Which?",
         options: ["She got lost on a school trip", "She won a dance contest", "She cooked for 30 people", "She ran a marathon"],
         correctIndex: 3,
       },
@@ -53,9 +53,9 @@ export const SOLO_GAMES: Record<SoloGameId, SoloGame> = {
     scoring: "verdict",
     intro: "The charges are read. You are the jury. Guilty or not guilty?",
     questions: [
-      { prompt: "[Sample] Mez is charged with replying to messages three days late.", options: ["Guilty", "Not guilty"], correctIndex: null },
-      { prompt: "[Sample] Mez is charged with taking 200 photos to choose one.", options: ["Guilty", "Not guilty"], correctIndex: null },
-      { prompt: "[Sample] Mez is charged with saying \"five more minutes\" and meaning an hour.", options: ["Guilty", "Not guilty"], correctIndex: null },
+      { prompt: "Mez is charged with replying to messages three days late.", options: ["Guilty", "Not guilty"], correctIndex: null },
+      { prompt: "Mez is charged with taking 200 photos to choose one.", options: ["Guilty", "Not guilty"], correctIndex: null },
+      { prompt: "Mez is charged with saying \"five more minutes\" and meaning an hour.", options: ["Guilty", "Not guilty"], correctIndex: null },
     ],
   },
   survey: {
@@ -69,12 +69,12 @@ export const SOLO_GAMES: Record<SoloGameId, SoloGame> = {
     intro: "A clue from the files. Whose story is it?",
     questions: [
       {
-        prompt: "[Sample] \"This person taught Mez how to ride a bike.\" Whose file is it?",
+        prompt: "\"This person taught Mez how to ride a bike.\" Whose file is it?",
         options: ["Her mum", "Her best friend", "Her cousin", "Her dad"],
         correctIndex: 3,
       },
       {
-        prompt: "[Sample] \"Mez and this person once missed a flight together.\" Whose file is it?",
+        prompt: "\"Mez and this person once missed a flight together.\" Whose file is it?",
         options: ["Her sister", "Her best friend", "Her colleague", "Her partner"],
         correctIndex: 1,
       },

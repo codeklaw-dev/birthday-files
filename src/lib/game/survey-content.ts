@@ -15,17 +15,17 @@ export interface SurveyQuestion {
 export const SURVEY_QUESTIONS: SurveyQuestion[] = [
   {
     id: "s1",
-    prompt: "[Sample] What's Mez's go-to comfort food?",
+    prompt: "What's Mez's go-to comfort food?",
     options: ["Biryani", "Pizza", "Instant noodles", "Chocolate"],
   },
   {
     id: "s2",
-    prompt: "[Sample] Where would Mez rather spend a day off?",
+    prompt: "Where would Mez rather spend a day off?",
     options: ["Beach", "Mountains", "Shopping", "Bed, all day"],
   },
   {
     id: "s3",
-    prompt: "[Sample] What's Mez's best quality?",
+    prompt: "What's Mez's best quality?",
     options: ["Kindness", "Humour", "Loyalty", "Honesty"],
   },
 ];
