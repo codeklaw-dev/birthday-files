@@ -2,13 +2,15 @@
 
 import Image from "next/image";
 import QRCode from "qrcode";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Check, Crown, Volume2, VolumeX } from "lucide-react";
 import { Balloons, Streamers } from "@/components/party";
 import { cx, TILE } from "@/components/ui";
 import { mediaSrc } from "@/lib/client/upload";
 import type { ConnectionStatus } from "@/lib/client/use-room";
 import type { Bilingual, Lang, Player } from "@/lib/game/types";
+import type { MediaItem } from "@/lib/game/media";
+import { premiereSlides, type Slide } from "@/lib/game/premiere";
 import cakeArt from "@/assets/party/cake.png";
 import discoBall from "@/assets/party/disco-ball.png";
 import logo from "@/assets/party/logo.png";
@@ -75,6 +77,8 @@ function Stage() {
       <section className="relative z-10 flex min-h-0 flex-1 flex-col px-[3vw] pb-[3.5vh] pt-[2vh]">
         {!view ? (
           <p className="m-auto animate-wiggle font-party text-[5vh]">Warming up the stage…</p>
+        ) : view.phase === "premiere" ? (
+          <Premiere view={view} joinUrl={joinUrl} />
         ) : view.phase === "lobby" ? (
           <Lobby view={view} joinUrl={joinUrl} />
         ) : view.phase === "question" || view.phase === "reveal" ? (
@@ -406,6 +410,158 @@ function Standings({ players }: { players: Player[] }) {
         </ol>
       )}
     </div>
+  );
+}
+
+/** The premiere: one wish photo/video per slide, moved on from the host's laptop. */
+function Premiere({ view, joinUrl }: { view: RoomView; joinUrl: string | null }) {
+  const slides = premiereSlides(view.messages);
+  const index = Math.min(view.slide, slides.length - 1);
+  const slide = slides[index];
+  const wishCount = new Set(slides.flatMap((s) => (s.kind === "wish" ? [s.message.id] : []))).size;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-[2vh]">
+      <div key={index} className="flex min-h-0 flex-1 animate-bounce-in flex-col">
+        {slide.kind === "intro" ? (
+          <PremiereIntro wishes={wishCount} />
+        ) : slide.kind === "outro" ? (
+          <PremiereOutro joinUrl={joinUrl} />
+        ) : (
+          <WishSlide slide={slide} />
+        )}
+      </div>
+      <div className="flex items-center gap-[1.5vw]" aria-hidden>
+        <div className="h-[1.2vh] flex-1 overflow-hidden rounded-full bg-white/20">
+          <div className="h-full rounded-full bg-party-yellow transition-[width] duration-500" style={{ width: `${((index + 1) / slides.length) * 100}%` }} />
+        </div>
+        <span className="font-mono text-[1.8vh] font-semibold tabular-nums">
+          {index + 1} / {slides.length}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function PremiereIntro({ wishes }: { wishes: number }) {
+  return (
+    <div className="relative grid flex-1 grid-cols-[1.15fr_1fr] items-center gap-[4vw]">
+      <div className="flex flex-col gap-[3vh]">
+        <span className="w-fit -rotate-2 rounded-full bg-party-pink px-[1.6vw] py-[1vh] font-mono text-[2.2vh] font-bold uppercase tracking-[0.3em] text-white shadow-[0_0.6vh_0_rgb(0_0_0/0.25)]">
+          Tonight&apos;s premiere
+        </span>
+        <h1 className="font-party text-[11vh] leading-[0.95] drop-shadow-[0_0.8vh_0_rgb(94_31_107/0.5)]">
+          Hello, I&apos;m <span className="inline-block animate-wiggle text-party-yellow">Casper</span> 👋
+        </h1>
+        <p className="max-w-[48vw] text-[3.6vh] font-semibold leading-snug">
+          The AI voice of <span className="text-party-yellow">RACO AI Technologies</span>, and your host tonight!
+        </p>
+        <p className="w-fit rotate-1 rounded-[2vh] bg-white px-[1.6vw] py-[1.4vh] text-[3vh] font-bold text-party-ink shadow-[0_0.8vh_0_rgb(0_0_0/0.2)]">
+          First up: {wishes} {wishes === 1 ? "wish" : "wishes"} for {EVENT.guestOfHonour} 💌
+        </p>
+      </div>
+      <div className="relative flex items-center justify-center">
+        <Image src={discoBall} alt="" sizes="20vw" className="absolute -right-[1vw] -top-[6vh] h-[20vh] w-auto animate-sway" />
+        <div className="rotate-3 bg-white p-[1.6vh] pb-[5vh] shadow-[0_2vh_3vh_rgb(43_18_51/0.4)]">
+          <Image src={mezPhoto} alt={EVENT.guestOfHonour} sizes="35vw" className="h-[50vh] w-auto object-cover" />
+          <p className="absolute bottom-[1.2vh] left-0 right-0 text-center font-party text-[3.2vh] text-party-purple">Happy birthday, {EVENT.guestOfHonour}!</p>
+        </div>
+        <Image src={partyPopper} alt="" sizes="12vw" className="absolute -bottom-[4vh] -left-[2vw] h-[16vh] w-auto animate-float" />
+      </div>
+    </div>
+  );
+}
+
+function PremiereOutro({ joinUrl }: { joinUrl: string | null }) {
+  return (
+    <div className="grid flex-1 grid-cols-[1.3fr_1fr] items-center gap-[4vw]">
+      <div className="flex flex-col gap-[3vh]">
+        <h1 className="font-party text-[11vh] leading-[0.95] drop-shadow-[0_0.8vh_0_rgb(94_31_107/0.5)]">
+          Let the <span className="inline-block animate-wiggle text-party-yellow">game show</span> begin! 🎉
+        </h1>
+        <p className="text-[3.6vh] font-semibold">Grab your phone and scan the code to join. Get ready, detectives!</p>
+        {joinUrl && (
+          <p className="w-fit rounded-full bg-white px-[1.6vw] py-[1vh] text-[2.6vh] font-bold text-party-purple">{joinUrl.replace(/^https?:\/\//, "")}</p>
+        )}
+      </div>
+      <div className="flex justify-center">{joinUrl && <Qr url={joinUrl} />}</div>
+    </div>
+  );
+}
+
+function WishSlide({ slide }: { slide: Extract<Slide, { kind: "wish" }> }) {
+  const { message: m, item } = slide;
+  const author = (
+    <div className="flex items-center gap-[1vw]">
+      {m.photo ? (
+        // eslint-disable-next-line @next/next/no-img-element -- inline data URL from the guest's phone
+        <img src={m.photo} alt="" className="size-[10vh] shrink-0 rounded-full object-cover ring-[0.6vh] ring-party-yellow" />
+      ) : (
+        <span aria-hidden className="grid size-[10vh] shrink-0 place-items-center rounded-full bg-party-lilac font-party text-[5vh] text-party-plum ring-[0.6vh] ring-party-yellow">
+          {m.author.slice(0, 1).toUpperCase()}
+        </span>
+      )}
+      <div className="min-w-0">
+        <p className="font-mono text-[1.8vh] font-semibold uppercase tracking-[0.25em] text-party-yellow">A wish from</p>
+        <p className={cx("font-party leading-none break-words", m.author.length > 12 ? "text-[4.5vh]" : "text-[6vh]")}>{m.author}</p>
+      </div>
+    </div>
+  );
+
+  if (!item) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-[5vh]">
+        <blockquote className="relative max-w-[72vw] -rotate-1 rounded-[4vh] bg-white px-[4vw] py-[6vh] text-center text-party-ink shadow-[0_2vh_0_rgb(94_31_107/0.45)]">
+          <span aria-hidden className="absolute -top-[5vh] left-[3vw] font-party text-[14vh] leading-none text-party-pink">“</span>
+          <p className={cx("font-party leading-tight", m.text.length > 220 ? "text-[4vh]" : m.text.length > 100 ? "text-[5.5vh]" : "text-[7vh]")}>{m.text}</p>
+        </blockquote>
+        {author}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)] gap-[3vw]">
+      <div className="flex min-h-0 items-center justify-center">
+        <div className="flex h-full max-h-full min-h-0 -rotate-1 items-center justify-center bg-white p-[1.4vh] shadow-[0_2vh_3vh_rgb(43_18_51/0.4)]">
+          <WishMedia item={item} />
+        </div>
+      </div>
+      <div className="flex min-h-0 flex-col justify-center gap-[3vh]">
+        {author}
+        {m.text && (
+          <p className={cx("rotate-1 rounded-[3vh] bg-white px-[1.8vw] py-[2.4vh] font-semibold leading-snug text-party-ink shadow-[0_1vh_0_rgb(0_0_0/0.2)]", m.text.length > 260 ? "text-[2.4vh]" : m.text.length > 120 ? "text-[2.9vh]" : "text-[3.6vh]")}>
+            “{m.text}”
+          </p>
+        )}
+        {slide.parts > 1 && (
+          <div className="flex flex-wrap items-center gap-[0.6vw]" aria-label={`${slide.part} of ${slide.parts}`}>
+            {Array.from({ length: slide.parts }, (_, i) => (
+              <span key={i} className={cx("h-[1.4vh] rounded-full", i + 1 === slide.part ? "w-[3vw] bg-party-yellow" : "w-[1.4vh] bg-white/40")} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Photos fill the frame; videos play with sound (muted only if the browser refuses). */
+function WishMedia({ item }: { item: MediaItem }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = false;
+    v.play().catch(() => {
+      v.muted = true;
+      void v.play().catch(() => {});
+    });
+  }, [item.url]);
+  return item.kind === "video" ? (
+    <video ref={ref} key={item.url} src={mediaSrc(item.url)} controls playsInline className="max-h-[70vh] max-w-full bg-black object-contain" />
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element -- guest upload served by our API
+    <img key={item.url} src={mediaSrc(item.url)} alt="" className="max-h-[70vh] max-w-full object-contain" />
   );
 }
 

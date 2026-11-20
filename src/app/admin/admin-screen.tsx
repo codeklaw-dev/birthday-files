@@ -1,13 +1,14 @@
 "use client";
 
-import { Check, EyeOff, ExternalLink, Minus, Plus, RotateCcw, UserX } from "lucide-react";
-import { useState } from "react";
+import { Check, ChevronLeft, ChevronRight, EyeOff, ExternalLink, Minus, Plus, RotateCcw, UserX } from "lucide-react";
+import { useEffect, useState } from "react";
 import { KeyGate } from "@/components/key-gate";
 import { Button, cx, HostLine, Logo, StatusDot } from "@/components/ui";
 import { useNow, useStored } from "@/lib/client/hooks";
 import { mediaSrc } from "@/lib/client/upload";
 import { useRoom, type RoomConnection } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
+import { premiereSlides } from "@/lib/game/premiere";
 import { SURVEY_QUESTIONS } from "@/lib/game/survey-content";
 import type { HostAction, Phase, RoomView } from "@/lib/game/types";
 
@@ -34,6 +35,7 @@ export function AdminScreen() {
 
 const PHASE_LABEL: Record<Phase, string> = {
   lobby: "Lobby",
+  premiere: "Premiere slideshow",
   question: "Question open",
   reveal: "Answer revealed",
   leaderboard: "Leaderboard",
@@ -74,6 +76,7 @@ function Dashboard({ hostKey, onLock }: { hostKey: string; onLock: () => void })
         <div className="grid flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:p-8">
           <div className="flex min-w-0 flex-col gap-4">
             <RunOfShow view={view} act={act} error={error} room={room} />
+            {view.phase === "premiere" && <Premiere view={view} act={act} />}
             <NowShowing view={view} />
             <Messages view={view} act={act} />
           </div>
@@ -112,7 +115,9 @@ function RunOfShow({ view, act, error, room }: { view: RoomView; act: Act; error
   // One unmistakable next step per phase.
   const primary: { label: string; action: HostAction } =
     phase === "lobby"
-      ? { label: "Start the show", action: { type: "host/start" } }
+      ? { label: "Start the premiere (wish slideshow)", action: { type: "host/premiere" } }
+      : phase === "premiere"
+        ? { label: "Start the game show", action: { type: "host/start" } }
       : open
         ? { label: `Reveal answer${left !== null ? ` (${left}s)` : ""}`, action: { type: "host/reveal" } }
         : phase === "reveal"
@@ -134,15 +139,16 @@ function RunOfShow({ view, act, error, room }: { view: RoomView; act: Act; error
         <Button
           variant="primary"
           className="min-h-14 text-lg"
-          disabled={phase === "lobby" && view.players.length === 0}
+          disabled={phase === "premiere" && view.players.length === 0}
           onClick={() => act(primary.action)}
         >
           {primary.label}
         </Button>
-        {phase === "lobby" && view.players.length === 0 && (
+        {phase === "premiere" && view.players.length === 0 && (
           <p className="text-sm text-haze">Waiting for at least one player to join from the TV&apos;s QR code.</p>
         )}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <Button disabled={open || phase === "premiere"} onClick={() => act({ type: "host/premiere" })}>Premiere</Button>
           <Button disabled={open} onClick={() => act({ type: "host/showLeaderboard" })}>Leaderboard</Button>
           <Button disabled={open} onClick={() => act({ type: "host/showMessages" })}>Message wall</Button>
           <Button disabled={open} onClick={() => act({ type: "host/startCake" })}>Cake</Button>
@@ -171,6 +177,56 @@ function RunOfShow({ view, act, error, room }: { view: RoomView; act: Act; error
           </Button>
         </div>
         {error && <p role="alert" className="text-sm text-stamp">{error}</p>}
+      </div>
+    </Card>
+  );
+}
+
+/** Previous / Next for the wish slideshow on the TV. Arrow keys work too. */
+function Premiere({ view, act }: { view: RoomView; act: Act }) {
+  const slides = premiereSlides(view.messages);
+  const index = Math.min(view.slide, slides.length - 1);
+  const slide = slides[index];
+  const go = (i: number) => void act({ type: "host/slide", index: Math.max(0, Math.min(slides.length - 1, i)) });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
+        e.preventDefault();
+        void act({ type: "host/slide", index: Math.min(slides.length - 1, index + 1) });
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        void act({ type: "host/slide", index: Math.max(0, index - 1) });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [act, index, slides.length]);
+
+  const what =
+    slide.kind === "intro"
+      ? "Casper's introduction"
+      : slide.kind === "outro"
+        ? "The end: time for the game show"
+        : `${slide.message.author}${slide.item ? ` · ${slide.item.kind} ${slide.part} of ${slide.parts}` : " · note"}`;
+
+  return (
+    <Card title="Premiere" aside={<span className="font-mono text-xs text-haze">Slide {index + 1} of {slides.length}</span>}>
+      <div className="flex flex-col gap-4">
+        <p className="text-lg font-semibold">On the TV: {what}</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Button className="min-h-14 text-lg" disabled={index === 0} onClick={() => go(index - 1)}>
+            <ChevronLeft className="size-5" aria-hidden /> Previous
+          </Button>
+          <Button variant="primary" className="min-h-14 text-lg" disabled={index === slides.length - 1} onClick={() => go(index + 1)}>
+            Next <ChevronRight className="size-5" aria-hidden />
+          </Button>
+        </div>
+        <p className="text-sm text-haze">
+          Tip: use the ← and → keys. Every wish is included except ones you&apos;ve hidden. When you reach the end, press{" "}
+          <strong className="text-cream">Start the game show</strong>.
+        </p>
       </div>
     </Card>
   );

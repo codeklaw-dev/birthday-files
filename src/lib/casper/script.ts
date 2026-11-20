@@ -9,6 +9,14 @@ export const SCRIPT = {
     en: "Welcome to The Birthday Files! Scan the code and open your case file.",
     bn: "দ্য বার্থডে ফাইলস-এ স্বাগতম! কোড স্ক্যান করে আপনার কেস ফাইল খুলুন।",
   },
+  intro: {
+    en: "Hello, I'm Casper, AI voice of RACO AI Technologies. I will be your host tonight! Before the game show begins, let's look at all the wishes for Mez.",
+    bn: "হ্যালো, আমি ক্যাস্পার, র‍্যাকো এআই টেকনোলজিসের এআই কণ্ঠ। আজ রাতে আমিই আপনাদের হোস্ট! গেম শো শুরুর আগে চলুন মেজের জন্য সবার শুভেচ্ছাগুলো দেখি।",
+  },
+  premiereOutro: {
+    en: "What lovely wishes! Now, detectives, grab your phones. The game show is about to begin!",
+    bn: "কী সুন্দর শুভেচ্ছা! এবার গোয়েন্দারা, ফোন হাতে নিন। গেম শো শুরু হতে চলেছে!",
+  },
   question: (n: number, total: number): Bilingual => ({
     en: `Question ${n} of ${total}. Fingers on phones — how well do you know Mez?`,
     bn: `প্রশ্ন ${n}, মোট ${total}টি। ফোন হাতে নিন — মেজকে কতটা চেনেন?`,

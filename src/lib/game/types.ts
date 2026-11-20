@@ -11,6 +11,7 @@ export type SoloGameId = "imposter" | "trial" | "survey" | "mystery";
 
 export type Phase =
   | "lobby"
+  | "premiere"
   | "question"
   | "reveal"
   | "leaderboard"
@@ -71,6 +72,8 @@ export interface ScoreEvent {
 export interface RoomState {
   code: string;
   phase: Phase;
+  /** Premiere slideshow position. */
+  slide?: number;
   players: Player[];
   /** Secret player token -> public player id. Never broadcast. */
   tokens: Record<string, string>;
@@ -134,6 +137,8 @@ export interface RoomView {
   role: Role;
   code: string;
   phase: Phase;
+  /** Premiere slideshow position. */
+  slide: number;
   rev: number;
   serverNow: number;
   players: Player[];
@@ -187,6 +192,8 @@ export type HostAction =
   | { type: "host/reset" }
   | { type: "host/award"; playerId: string; delta: number; reason?: string }
   | { type: "host/kick"; playerId: string }
+  | { type: "host/premiere" }
+  | { type: "host/slide"; index: number }
   | { type: "host/moderate"; messageId: string; status: MessageStatus }
   | { type: "host/setLang"; lang: Lang | "both" };
 

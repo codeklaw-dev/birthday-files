@@ -1,4 +1,5 @@
 import { SCRIPT } from "@/lib/casper/script";
+import { premiereSlides } from "@/lib/game/premiere";
 import { isMediaItem, MAX_MEDIA_PER_WISH } from "./media";
 import { MOCK_QUESTIONS } from "./mock-data";
 import { SOLO_GAMES, SOLO_POINTS } from "./solo-content";
@@ -44,6 +45,7 @@ export function createRoom(code = "MEZ26"): RoomState {
   return {
     code,
     phase: "lobby",
+    slide: 0,
     players: [],
     tokens: {},
     questions: MOCK_QUESTIONS,
@@ -232,7 +234,7 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
     }
 
     case "host/start":
-      if (state.phase !== "lobby") return fail("The game has already started.");
+      if (state.phase !== "lobby" && state.phase !== "premiere") return fail("The game has already started.");
       return startQuestion(state, 0, now);
 
     case "host/next":
@@ -255,6 +257,18 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
         phase: "leaderboard",
         hostLine: SCRIPT.leaderboard(rankPlayers(state.players)[0]?.name ?? null),
       });
+
+    case "host/premiere":
+      if (state.phase === "question") return fail("Reveal the current question first.");
+      return ok({ ...state, phase: "premiere", slide: 0, hostLine: SCRIPT.intro });
+
+    case "host/slide": {
+      if (state.phase !== "premiere") return fail("Start the premiere first.");
+      const slides = premiereSlides(state.messages);
+      const index = Math.max(0, Math.min(slides.length - 1, Math.trunc(Number(action.index) || 0)));
+      const outro = slides[index].kind === "outro";
+      return ok({ ...state, slide: index, hostLine: outro ? SCRIPT.premiereOutro : index === 0 ? SCRIPT.intro : state.hostLine });
+    }
 
     case "host/showMessages":
       if (state.phase === "question") return fail("Reveal the current question first.");
@@ -416,6 +430,7 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
     role,
     code: state.code,
     phase: state.phase,
+    slide: state.slide ?? 0,
     rev: state.rev,
     serverNow: now,
     players: rankPlayers(state.players),
@@ -442,7 +457,9 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
     messages:
       role === "host"
         ? state.messages
-        : role === "display" && state.phase === "messages"
+        : role === "display" && state.phase === "premiere"
+          ? state.messages.filter((m) => m.status !== "hidden")
+          : role === "display" && state.phase === "messages"
           ? state.messages.filter((m) => m.status === "approved")
           : [],
     solo: role === "player" && me?.remote ? soloView(state, me.id) : null,

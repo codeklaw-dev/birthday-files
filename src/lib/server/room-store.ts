@@ -36,10 +36,11 @@ class RoomStore {
   private listeners = new Set<(s: RoomState) => void>();
   private timer: ReturnType<typeof setTimeout> | null = null;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private dirty = false;
 
   constructor() {
     this.syncTimer();
-    const flush = () => this.save();
+    const flush = () => this.dirty && this.save();
     process.once("SIGTERM", flush);
     process.once("SIGINT", flush);
     process.once("beforeExit", flush);
@@ -49,9 +50,10 @@ class RoomStore {
   save() {
     if (this.saveTimer) clearTimeout(this.saveTimer);
     this.saveTimer = null;
+    this.dirty = false;
     try {
       mkdirSync(DATA_DIR, { recursive: true });
-      const tmp = `${ROOM_FILE}.tmp`;
+      const tmp = `${ROOM_FILE}.${process.pid}.tmp`;
       writeFileSync(tmp, JSON.stringify(this.state));
       renameSync(tmp, ROOM_FILE);
     } catch (err) {
@@ -60,6 +62,7 @@ class RoomStore {
   }
 
   private scheduleSave() {
+    this.dirty = true;
     this.saveTimer ??= setTimeout(() => this.save(), 200);
   }
 

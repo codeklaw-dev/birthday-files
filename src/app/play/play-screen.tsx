@@ -193,6 +193,10 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
         </Section>
       )}
 
+      {view.phase === "premiere" && (
+        <Section title="The premiere" body={`Everyone's wishes for ${EVENT.guestOfHonour} are on the big screen. Keep this page open: the game show starts right after.`} />
+      )}
+
       {view.phase === "messages" && (
         <Section title="Message wall" body={`Wishes for ${EVENT.guestOfHonour} are being revealed. Eyes on the big screen!`} />
       )}
