@@ -1,7 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { useState } from "react";
+import { Heart, Moon, Star, Zap } from "lucide-react";
 import type { ConnectionStatus } from "@/lib/client/use-room";
 import type { Bilingual, Lang, Player } from "@/lib/game/types";
 import { EVENT } from "@/lib/event";
@@ -128,70 +128,13 @@ export function Leaderboard({
   );
 }
 
+/** Answer tiles. Phones and the TV share colour + icon so guests can match them at a glance. */
 export const TILE = [
-  { bg: "bg-tile-a", glyph: "▲" },
-  { bg: "bg-tile-b", glyph: "◆" },
-  { bg: "bg-tile-c", glyph: "●" },
-  { bg: "bg-tile-d", glyph: "■" },
+  { bg: "bg-tile-a", Icon: Heart, name: "Heart" },
+  { bg: "bg-tile-b", Icon: Star, name: "Star" },
+  { bg: "bg-tile-c", Icon: Zap, name: "Bolt" },
+  { bg: "bg-tile-d", Icon: Moon, name: "Moon" },
 ] as const;
-
-/** Guest message composer, shared by /play and /invite. */
-export function MessageForm({
-  defaultAuthor = "",
-  onSubmit,
-}: {
-  defaultAuthor?: string;
-  onSubmit: (author: string, text: string) => Promise<{ ok: boolean; error?: string }>;
-}) {
-  const [author, setAuthor] = useState(defaultAuthor);
-  const [text, setText] = useState("");
-  const [state, setState] = useState<{ kind: "idle" | "sending" | "sent" | "error"; error?: string }>({ kind: "idle" });
-  const max = 280;
-
-  return (
-    <form
-      className="flex flex-col gap-3"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        setState({ kind: "sending" });
-        const res = await onSubmit(author, text);
-        if (res.ok) {
-          setText("");
-          setState({ kind: "sent" });
-        } else setState({ kind: "error", error: res.error });
-      }}
-    >
-      <Field label="Your name">
-        <input
-          required
-          maxLength={20}
-          value={author}
-          onChange={(e) => setAuthor(e.target.value)}
-          autoComplete="given-name"
-          className="input"
-        />
-      </Field>
-      <Field label="Message for Mez" hint={`${text.length}/${max}`}>
-        <textarea
-          required
-          rows={3}
-          maxLength={max}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="A wish, a memory, an inside joke…"
-          className="input resize-none"
-        />
-      </Field>
-      <Button variant="primary" type="submit" disabled={state.kind === "sending"}>
-        {state.kind === "sending" ? "Sending…" : "Send to the files"}
-      </Button>
-      <p aria-live="polite" className="min-h-5 text-sm">
-        {state.kind === "sent" && <span className="text-go">Filed! It appears on the big screen once the host approves it.</span>}
-        {state.kind === "error" && <span className="text-stamp">{state.error}</span>}
-      </p>
-    </form>
-  );
-}
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (

@@ -172,6 +172,7 @@ function QuestionBoard({ view, clockOffset }: { view: RoomView; clockOffset: num
 
       <ul className="grid min-h-0 flex-1 grid-cols-1 gap-4 md:grid-cols-2">
         {q.options.map((opt, i) => {
+          const { Icon } = TILE[i % 4];
           const correct = revealed && q.correctIndex === i;
           const count = q.tally?.[i] ?? 0;
           return (
@@ -184,7 +185,7 @@ function QuestionBoard({ view, clockOffset }: { view: RoomView; clockOffset: num
                 correct && "animate-pop ring-8 ring-cream",
               )}
             >
-              <span aria-hidden className="text-3xl">{TILE[i % 4].glyph}</span>
+              <Icon aria-hidden className="size-10 shrink-0" fill="currentColor" strokeWidth={2} />
               <span className="min-w-0 flex-1">{opt}</span>
               {revealed && (
                 <span className="font-mono text-2xl tabular-nums">
