@@ -69,107 +69,22 @@ export function Streamers({ className }: { className?: string }) {
 
 /* ---------------------------------------------------------------- Wishes */
 
-type Mode = "video" | "upload" | "voice" | "note";
+export type Mode = "video" | "upload" | "voice" | "note";
 type Media = { kind: "video" | "image" | "audio"; url: string };
 export type Profile = { name: string; photo: string | null };
 export type WishSubmit = (author: string, text: string, photo: string | null) => Promise<{ ok: boolean; error?: string }>;
 
-const WAYS: { mode: Mode; label: string; hint: string; Icon: typeof Video; tone: string }[] = [
+export const WAYS: { mode: Mode; label: string; hint: string; Icon: typeof Video; tone: string }[] = [
   { mode: "video", label: "Record a video", hint: "Say it to the camera", Icon: Video, tone: "bg-party-pink" },
   { mode: "upload", label: "Upload a photo or video", hint: "Your favourite memory", Icon: Upload, tone: "bg-party-sky" },
   { mode: "voice", label: "Record a voice message", hint: "Up to a minute", Icon: Mic, tone: "bg-party-sun" },
   { mode: "note", label: "Write a note", hint: "A wish, a memory, an inside joke", Icon: PenLine, tone: "bg-party-mint" },
 ];
 
-type Sent = { text: string; mediaWord: string | null };
+export type Sent = { text: string; mediaWord: string | null };
 
-/**
- * Pick a way to wish, fill it in, then a clear "Wish sent" screen. With a
- * `profile`, the name is fixed and the photo travels with the message.
- * Media is captured and previewed on the phone; only the written note is
- * sent until uploads exist (Milestone 4: Supabase Storage).
- */
-export function WishWays({
-  profile,
-  defaultAuthor = "",
-  onSubmit,
-  onSent,
-  sentActions,
-  listFooter,
-}: {
-  profile?: Profile;
-  defaultAuthor?: string;
-  onSubmit: WishSubmit;
-  onSent?: () => void;
-  /** Extra buttons on the confirmation screen, e.g. "See tonight's games". */
-  sentActions?: ReactNode;
-  /** Shown under the list of ways to wish, e.g. a "Complete wish" button. */
-  listFooter?: ReactNode;
-}) {
-  const [mode, setMode] = useState<Mode | null>(null);
-  const [sent, setSent] = useState<Sent | null>(null);
-  const [author, setAuthor] = useState(profile?.name ?? defaultAuthor);
-  const way = WAYS.find((w) => w.mode === mode);
-
-  if (sent) {
-    return (
-      <WishSent
-        sent={sent}
-        author={profile?.name ?? author}
-        photo={profile?.photo ?? null}
-        actions={sentActions}
-        onAnother={() => {
-          setSent(null);
-          setMode(null);
-        }}
-      />
-    );
-  }
-
-  if (!way) {
-    return (
-      <div className="party-card flex flex-col gap-1 p-2">
-      <ul className="flex flex-col gap-1" aria-label="Ways to wish">
-        {WAYS.map((w) => (
-          <li key={w.mode}>
-            <button
-              type="button"
-              onClick={() => setMode(w.mode)}
-              className="flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition hover:bg-party-purple/10 active:bg-party-purple/15"
-            >
-              <span className={cx("grid size-11 shrink-0 place-items-center rounded-full text-party-ink", w.tone)}>
-                <w.Icon aria-hidden className="size-5" strokeWidth={2.4} />
-              </span>
-              <span className="min-w-0">
-                <span className="block font-semibold">{w.label}</span>
-                <span className="block text-sm text-party-ink/65">{w.hint}</span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      {listFooter && <div className="px-2 pb-2 pt-1">{listFooter}</div>}
-      </div>
-    );
-  }
-
-  return (
-    <WishForm
-      key={way.mode}
-      way={way}
-      author={author}
-      setAuthor={profile ? null : setAuthor}
-      onSubmit={(text) => onSubmit(profile?.name ?? author, text, profile?.photo ?? null)}
-      onBack={() => setMode(null)}
-      onSent={(s) => {
-        setSent(s);
-        onSent?.();
-      }}
-    />
-  );
-}
-
-function WishSent({
+/** Clear confirmation after a wish is sent. */
+export function WishSent({
   sent,
   author,
   photo,
@@ -217,15 +132,18 @@ function WishSent({
   );
 }
 
-function WishForm({
+/** One way to wish (video, upload, voice or note), plus the note that gets sent. */
+export function WishForm({
   way,
   author,
   setAuthor,
   onSubmit,
   onBack,
   onSent,
+  submitLabel = "Send to the files",
 }: {
   way: (typeof WAYS)[number];
+  submitLabel?: string;
   author: string;
   /** Null when the name comes from a saved profile. */
   setAuthor: ((v: string) => void) | null;
@@ -292,7 +210,7 @@ function WishForm({
       </PartyField>
 
       <button type="submit" disabled={state.kind === "sending"} className="party-pill bg-party-purple text-white">
-        {state.kind === "sending" ? "Sending…" : "Send to the files"}
+        {state.kind === "sending" ? "Sending…" : submitLabel}
       </button>
       <p aria-live="polite" className="min-h-5 text-sm">
         {state.kind === "info" && <span className="text-party-plum">{state.msg}</span>}
@@ -333,27 +251,13 @@ export async function shrinkPhoto(file: File): Promise<string> {
   }
 }
 
-/** Name + profile picture for guests joining from afar. */
-export function ProfileForm({ initial, onDone }: { initial: Profile | null; onDone: (p: Profile) => void }) {
-  const [name, setName] = useState(initial?.name ?? "");
-  const [photo, setPhoto] = useState<string | null>(initial?.photo ?? null);
+/** Round "add a photo" button that shrinks the chosen picture for sending. */
+export function PhotoPicker({ photo, onPhoto }: { photo: string | null; onPhoto: (p: string) => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-
   return (
-    <form
-      className="party-card party-light flex flex-col items-center gap-4 p-5 text-center"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!photo) return setError("Add a profile picture so everyone knows who's wishing.");
-        onDone({ name: name.trim(), photo });
-      }}
-    >
-      <div>
-        <h3 className="font-party text-2xl text-party-purple">Who&apos;s wishing?</h3>
-        <p className="mt-1 text-sm text-party-ink/75">Your photo shows next to your wish on the big screen, so the room knows it&apos;s you.</p>
-      </div>
+    <div className="flex flex-col items-center gap-2">
       <input
         ref={input}
         type="file"
@@ -367,7 +271,7 @@ export function ProfileForm({ initial, onDone }: { initial: Profile | null; onDo
           setBusy(true);
           setError(null);
           try {
-            setPhoto(await shrinkPhoto(file));
+            onPhoto(await shrinkPhoto(file));
           } catch {
             setError("That photo couldn't be read. Try a different one.");
           } finally {
@@ -379,30 +283,24 @@ export function ProfileForm({ initial, onDone }: { initial: Profile | null; onDo
         type="button"
         onClick={() => input.current?.click()}
         aria-label={photo ? "Change profile picture" : "Add a profile picture"}
-        className="relative grid size-28 place-items-center overflow-hidden rounded-full border-4 border-dashed border-party-purple/40 bg-party-lilac/40 text-party-purple"
+        className="relative grid size-32 place-items-center overflow-hidden rounded-full border-4 border-dashed border-party-purple/40 bg-party-lilac/40 text-party-purple"
       >
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element -- local data URL
           <img src={photo} alt="Your profile picture" className="size-full object-cover" />
         ) : (
-          <Camera aria-hidden className="size-9" />
+          <Camera aria-hidden className="size-10" />
         )}
         <span className="absolute inset-x-0 bottom-0 bg-party-ink/60 py-1 text-xs font-semibold text-white">
           {busy ? "Loading…" : photo ? "Change" : "Add photo"}
         </span>
       </button>
-      <PartyField label="Your name">
-        <input required maxLength={20} value={name} onChange={(e) => setName(e.target.value)} autoComplete="given-name" className="party-input" />
-      </PartyField>
       {error && (
         <p role="alert" className="text-sm font-semibold text-party-berry">
           {error}
         </p>
       )}
-      <button type="submit" disabled={busy} className="party-pill w-full bg-party-purple text-white">
-        Continue to my wish
-      </button>
-    </form>
+    </div>
   );
 }
 

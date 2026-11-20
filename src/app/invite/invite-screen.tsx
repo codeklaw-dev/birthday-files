@@ -3,8 +3,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { PartyPopper, Sparkles, Wifi } from "lucide-react";
-import { Balloons, ProfileForm, Streamers, WishWays, type Profile } from "@/components/party";
+import { ArrowLeft, PartyPopper, Sparkles, Wifi } from "lucide-react";
+import {
+  Balloons,
+  PartyField,
+  PhotoPicker,
+  Streamers,
+  WAYS,
+  WishForm,
+  WishSent,
+  type Mode,
+  type Profile,
+  type Sent,
+} from "@/components/party";
 import { GAME_ART } from "@/components/game-art";
 import { cx } from "@/components/ui";
 import { useNow, useStored } from "@/lib/client/hooks";
@@ -161,135 +172,252 @@ function Countdown() {
   );
 }
 
-/** Send wish → "Will you be at the party?" → game flow, or profile + wish + games. */
+type Step = "name" | "attendance" | "photo" | "type" | "wish" | "done";
+const STEPS: Step[] = ["name", "attendance", "photo", "type", "wish"];
+
+/**
+ * One question at a time: name → at the party? → photo → how to wish → the
+ * wish → confirmation. The attendance answer decides the ending: virtual
+ * troopers unlock the games, party guests are pointed to the live game.
+ */
 function GuestFlow({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((o: boolean) => boolean)) => void }) {
   const guest = useGuest();
-  const [editingProfile, setEditingProfile] = useState(false);
-  const { attendance, profile } = guest;
+  const [step, setStep] = useState<Step>(guest.wished ? "done" : "name");
+  const [name, setName] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode | null>(null);
+  const [sent, setSent] = useState<Sent | null>(null);
+  const savedName = guest.profile?.name ?? "";
+  const photo = guest.profile?.photo ?? null;
+  const { attendance } = guest;
+  const virtual = attendance === "virtual";
+  const draftName = name ?? savedName;
+  const go = (next: Step) => setStep(next);
+  const back = () => setStep(STEPS[Math.max(0, STEPS.indexOf(step) - 1)]);
+  const saveProfile = (patch: Partial<Profile>) => guest.setProfile({ name: savedName, photo, ...patch });
 
-  const changeAnswer = (
-    <button
-      type="button"
-      onClick={() => {
-        guest.setAttendance(null);
-        setOpen(true);
-      }}
-      className="mx-auto mt-3 block text-sm font-semibold text-party-plum underline underline-offset-4"
-    >
-      Change my answer
-    </button>
-  );
-
-  if (!attendance) {
+  if (!open && step === "name" && !guest.wished) {
     return (
-      <div className="flex w-full flex-col items-center gap-3">
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-controls="attendance"
-          onClick={() => setOpen((o) => !o)}
-          className="party-pill bg-party-green text-white"
-        >
+      <div className="flex justify-center">
+        <button type="button" onClick={() => setOpen(true)} className="party-pill bg-party-green text-white">
           Send wish
         </button>
-        {open && (
-          <section id="attendance" aria-labelledby="attendance-q" className="party-card party-light w-full animate-rise p-5 text-center">
-            <h3 id="attendance-q" className="font-party text-2xl text-party-purple">
-              Will you be at the party?
-            </h3>
-            <p className="mt-1 text-sm text-party-ink/75">{EVENT.dateLabel}</p>
-            <div className="mt-4 flex flex-col gap-3">
-              <ChoiceButton
-                tone="bg-party-green text-white"
-                Icon={PartyPopper}
-                title="I'll be there"
-                body="I'm coming to the party and will play on my phone."
-                onClick={() => guest.setAttendance("party")}
-              />
-              <ChoiceButton
-                tone="bg-party-sky text-party-ink"
-                Icon={Wifi}
-                title="Virtual trooper"
-                body="I can't make it, but I'll send a wish and play from afar."
-                onClick={() => guest.setAttendance("virtual")}
-              />
-            </div>
+      </div>
+    );
+  }
+
+  if (step === "done") {
+    const ending = virtual ? (
+      <button type="button" onClick={scrollToGames} className="party-pill bg-party-green text-white">
+        See tonight&apos;s games
+      </button>
+    ) : (
+      <Link href="/play" className="party-pill bg-party-green text-white">
+        Join the game
+      </Link>
+    );
+    return (
+      <div className="flex flex-col gap-3">
+        {sent ? (
+          <WishSent
+            sent={sent}
+            author={savedName}
+            photo={photo}
+            actions={
+              <>
+                {!virtual && <p className="font-semibold text-party-plum">See you at the party! The games are revealed live on the night.</p>}
+                {ending}
+              </>
+            }
+            onAnother={() => {
+              setSent(null);
+              setMode(null);
+              go("type");
+            }}
+          />
+        ) : (
+          <section className="party-card party-light flex flex-col items-center gap-3 p-6 text-center">
+            <h3 className="font-party text-2xl text-party-purple">Thanks, {savedName || "detective"}!</h3>
+            <p className="text-party-ink/80">
+              {virtual ? "Your wish is in. Tonight's games are waiting for you below." : "Your wish is in. See you at the party!"}
+            </p>
+            {ending}
+            <button
+              type="button"
+              onClick={() => go("type")}
+              className="rounded-full px-4 py-2.5 font-semibold text-party-purple hover:bg-party-purple/10"
+            >
+              Send another wish
+            </button>
           </section>
         )}
       </div>
     );
   }
 
-  if (attendance === "party") {
-    return (
-      <section className="party-card party-light animate-pop p-6 text-center" aria-labelledby="party-title">
-        <span className="mx-auto grid size-14 place-items-center rounded-full bg-party-green text-white">
-          <PartyPopper aria-hidden className="size-7" />
-        </span>
-        <h3 id="party-title" className="mt-3 font-party text-3xl text-party-purple">
-          See you at the party!
-        </h3>
-        <p className="mt-2 text-party-ink/80">
-          The games run live on the night. Join now to save your detective name, and you&apos;ll be ready when the host starts the show.
+  const n = STEPS.indexOf(step) + 1;
+  const header = (
+    <div className="mb-3 flex items-center gap-3">
+      {n > 1 ? (
+        <button type="button" onClick={back} aria-label="Back" className="grid size-10 shrink-0 place-items-center rounded-full bg-white/70 text-party-ink">
+          <ArrowLeft aria-hidden className="size-5" />
+        </button>
+      ) : (
+        <span className="size-10 shrink-0" />
+      )}
+      <div className="flex-1">
+        <div className="flex gap-1.5" aria-hidden>
+          {STEPS.map((s, i) => (
+            <span key={s} className={cx("h-2 flex-1 rounded-full", i < n ? "bg-party-purple" : "bg-party-purple/20")} />
+          ))}
+        </div>
+        <p className="mt-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-party-plum">
+          Step {n} of {STEPS.length}
         </p>
-        <Link href="/play" className="party-pill mt-5 w-full bg-party-green text-white">
-          Join the game
-        </Link>
-        {changeAnswer}
-      </section>
-    );
-  }
+      </div>
+    </div>
+  );
 
-  if (!profile || editingProfile) {
+  if (step === "wish") {
+    const way = WAYS.find((w) => w.mode === mode) ?? WAYS[3];
     return (
       <div className="animate-rise">
-        <ProfileForm
-          initial={profile}
-          onDone={(p) => {
-            guest.setProfile(p);
-            setEditingProfile(false);
+        {header}
+        <WishForm
+          key={way.mode}
+          way={way}
+          author={savedName}
+          setAuthor={null}
+          submitLabel="Complete Wish"
+          onSubmit={(text) => submitMessage(savedName, text, photo)}
+          onBack={back}
+          onSent={(s) => {
+            setSent(s);
+            guest.setWished();
+            go("done");
           }}
         />
-        {changeAnswer}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3 rounded-full bg-white/70 py-1.5 pl-1.5 pr-4">
-        {profile.photo && (
-          // eslint-disable-next-line @next/next/no-img-element -- local data URL
-          <img src={profile.photo} alt="" className="size-10 rounded-full object-cover" />
-        )}
-        <span className="min-w-0 flex-1 truncate text-left font-semibold">Wishing as {profile.name}</span>
-        <button type="button" onClick={() => setEditingProfile(true)} className="text-sm font-semibold text-party-purple underline underline-offset-4">
-          Edit
-        </button>
-      </div>
-      <WishWays
-        profile={profile}
-        onSubmit={submitMessage}
-        onSent={guest.setWished}
-        listFooter={
-          <button
-            type="button"
-            onClick={() => {
-              guest.setWished();
-              setTimeout(scrollToGames, 50);
+    <div key={step} className="animate-rise">
+      {header}
+      <section className="party-card party-light flex flex-col gap-4 p-5 text-center" aria-labelledby="step-q">
+        {step === "name" && (
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!draftName.trim()) return;
+              saveProfile({ name: draftName.trim() });
+              go("attendance");
             }}
-            className="party-pill w-full bg-party-green text-white"
           >
-            Complete Wish
-          </button>
-        }
-        sentActions={
-          <button type="button" onClick={scrollToGames} className="party-pill bg-party-green text-white">
-            See tonight&apos;s games
-          </button>
-        }
-      />
-      {changeAnswer}
+            <h3 id="step-q" className="font-party text-2xl text-party-purple">
+              What&apos;s your name?
+            </h3>
+            <PartyField label="Your name">
+              <input
+                autoFocus
+                required
+                maxLength={20}
+                value={draftName}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="given-name"
+                className="party-input text-center"
+              />
+            </PartyField>
+            <button type="submit" disabled={!draftName.trim()} className="party-pill w-full bg-party-purple text-white">
+              Next
+            </button>
+          </form>
+        )}
+
+        {step === "attendance" && (
+          <>
+            <div>
+              <h3 id="step-q" className="font-party text-2xl text-party-purple">
+                Will you be at the party, {savedName}?
+              </h3>
+              <p className="mt-1 text-sm text-party-ink/75">{EVENT.dateLabel}</p>
+            </div>
+            <ChoiceButton
+              tone="bg-party-green text-white"
+              Icon={PartyPopper}
+              title="I'll be there"
+              body="I'm coming to the party."
+              selected={attendance === "party"}
+              onClick={() => {
+                guest.setAttendance("party");
+                go("photo");
+              }}
+            />
+            <ChoiceButton
+              tone="bg-party-sky text-party-ink"
+              Icon={Wifi}
+              title="Virtual trooper"
+              body="I can't make it, but I'll join from afar."
+              selected={attendance === "virtual"}
+              onClick={() => {
+                guest.setAttendance("virtual");
+                go("photo");
+              }}
+            />
+          </>
+        )}
+
+        {step === "photo" && (
+          <>
+            <div>
+              <h3 id="step-q" className="font-party text-2xl text-party-purple">
+                Add a profile photo
+              </h3>
+              <p className="mt-1 text-sm text-party-ink/75">It shows next to your wish on the big screen, so everyone knows it&apos;s you.</p>
+            </div>
+            <PhotoPicker photo={photo} onPhoto={(p) => saveProfile({ photo: p })} />
+            <button type="button" disabled={!photo} onClick={() => go("type")} className="party-pill w-full bg-party-purple text-white">
+              Next
+            </button>
+            {!virtual && !photo && (
+              <button type="button" onClick={() => go("type")} className="text-sm font-semibold text-party-plum underline underline-offset-4">
+                Skip for now
+              </button>
+            )}
+            {virtual && !photo && <p className="text-sm text-party-ink/70">Virtual troopers need a photo so the room can see who&apos;s wishing.</p>}
+          </>
+        )}
+
+        {step === "type" && (
+          <>
+            <h3 id="step-q" className="font-party text-2xl text-party-purple">
+              How would you like to wish {EVENT.guestOfHonour}?
+            </h3>
+            <ul className="flex flex-col gap-1 text-left">
+              {WAYS.map((w) => (
+                <li key={w.mode}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode(w.mode);
+                      go("wish");
+                    }}
+                    className="flex w-full items-center gap-3 rounded-2xl p-2.5 text-left transition hover:bg-party-purple/10 active:bg-party-purple/15"
+                  >
+                    <span className={cx("grid size-11 shrink-0 place-items-center rounded-full text-party-ink", w.tone)}>
+                      <w.Icon aria-hidden className="size-5" strokeWidth={2.4} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold">{w.label}</span>
+                      <span className="block text-sm text-party-ink/65">{w.hint}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
     </div>
   );
 }
@@ -300,7 +428,9 @@ function ChoiceButton({
   title,
   body,
   onClick,
+  selected,
 }: {
+  selected?: boolean;
   tone: string;
   Icon: typeof Wifi;
   title: string;
@@ -311,7 +441,8 @@ function ChoiceButton({
     <button
       type="button"
       onClick={onClick}
-      className={cx("flex items-center gap-3 rounded-3xl p-4 text-left shadow-[0_5px_0_rgb(0_0_0/0.18)] transition active:translate-y-1 active:shadow-[0_1px_0_rgb(0_0_0/0.18)]", tone)}
+      aria-pressed={selected}
+      className={cx(selected && "ring-4 ring-party-purple", "flex items-center gap-3 rounded-3xl p-4 text-left shadow-[0_5px_0_rgb(0_0_0/0.18)] transition active:translate-y-1 active:shadow-[0_1px_0_rgb(0_0_0/0.18)]", tone)}
     >
       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-white/30">
         <Icon aria-hidden className="size-6" />
@@ -326,7 +457,8 @@ function ChoiceButton({
 
 function Summons() {
   const { attendance, wished } = useGuest();
-  const showGames = attendance === "party" || (attendance === "virtual" && wished);
+  // Party guests never see the games ahead of time; virtual troopers unlock them with a wish.
+  const showGames = attendance === "virtual" && wished;
 
   return (
     <section className="party-stage px-4 pb-14 pt-12 text-center">
@@ -342,10 +474,14 @@ function Summons() {
         </p>
 
         {showGames ? (
-          <Games canPlay={attendance === "virtual"} />
+          <Games />
         ) : (
           <p className="mt-8 rounded-full bg-party-ink/30 px-5 py-2 font-semibold">
-            {attendance === "virtual" ? "Send your wish to unlock tonight's games." : "Tap Send wish above to unlock tonight's games."}
+            {attendance === "party"
+              ? "The games are a surprise. You'll play them live at the party!"
+              : attendance === "virtual"
+                ? "Send your wish to unlock tonight's games."
+                : "Send a wish above to get started."}
           </p>
         )}
 
@@ -358,12 +494,12 @@ function Summons() {
   );
 }
 
-function Games({ canPlay }: { canPlay: boolean }) {
+function Games() {
   return (
     <div id="games" className="mt-10 w-full scroll-mt-6">
       <h3 className="font-party text-3xl">Tonight&apos;s Games</h3>
       <p className="mt-1 text-white/90">
-        {canPlay ? "Can't be there? Play along from wherever you are." : "You'll play these live at the party."}
+        Can&apos;t be there? Play along from wherever you are.
       </p>
       <ul className="mt-6 grid gap-5 sm:grid-cols-2">
         {EVENT.games.map((g, i) => {
@@ -377,11 +513,9 @@ function Games({ canPlay }: { canPlay: boolean }) {
               {art && <Image src={art.src} alt={art.alt} sizes="160px" className="h-36 w-auto object-contain" />}
               <h4 className="mt-3 font-party text-2xl">{g.name}</h4>
               <p className="mt-1 text-white/90">{g.blurb}</p>
-              {canPlay && (
-                <Link href="/play" aria-label={`Play ${g.name}`} className="party-pill mt-4 bg-party-yellow px-8 text-party-ink">
-                  Play
-                </Link>
-              )}
+              <Link href="/play" aria-label={`Play ${g.name}`} className="party-pill mt-4 bg-party-yellow px-8 text-party-ink">
+                Play
+              </Link>
             </li>
           );
         })}
