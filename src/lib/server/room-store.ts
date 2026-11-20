@@ -1,21 +1,67 @@
 import "server-only";
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { networkInterfaces } from "node:os";
+import path from "node:path";
 import { applyAction, createRoom } from "@/lib/game/engine";
 import type { Action, ActionResult, RoomState } from "@/lib/game/types";
 
+/** Where the room is saved. On Railway this is a mounted volume, so it survives restarts and redeploys. */
+export const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), ".data");
+const ROOM_FILE = path.join(DATA_DIR, "room.json");
+
+function loadRoom(): RoomState {
+  const fresh = createRoom();
+  try {
+    const saved = JSON.parse(readFileSync(ROOM_FILE, "utf8")) as Partial<RoomState>;
+    if (!saved || typeof saved !== "object" || !Array.isArray(saved.players)) return fresh;
+    // Keep guests, wishes, answers and scores; always use the current question set.
+    return { ...fresh, ...saved, questions: fresh.questions };
+  } catch {
+    return fresh;
+  }
+}
+
 /**
- * MOCK realtime backend: one room held in server memory, fanned out to
- * clients over Server-Sent Events.
+ * Realtime backend: one room held in server memory, fanned out to clients
+ * over Server-Sent Events, and saved to DATA_DIR/room.json after every change
+ * so a restart picks up where it left off.
  *
  * Works with `next dev` / `next start` (a single Node process) so phones on
  * the same Wi-Fi can really play. It will NOT work on Vercel serverless —
  * that is what the Supabase adapter replaces (docs/ARCHITECTURE.md).
  */
 class RoomStore {
-  private state: RoomState = createRoom();
+  private state: RoomState = loadRoom();
   private listeners = new Set<(s: RoomState) => void>();
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.syncTimer();
+    const flush = () => this.save();
+    process.once("SIGTERM", flush);
+    process.once("SIGINT", flush);
+    process.once("beforeExit", flush);
+  }
+
+  /** Write the room atomically (temp file, then rename) so a crash never leaves half a file. */
+  save() {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    try {
+      mkdirSync(DATA_DIR, { recursive: true });
+      const tmp = `${ROOM_FILE}.tmp`;
+      writeFileSync(tmp, JSON.stringify(this.state));
+      renameSync(tmp, ROOM_FILE);
+    } catch (err) {
+      console.error("Couldn't save the room:", err);
+    }
+  }
+
+  private scheduleSave() {
+    this.saveTimer ??= setTimeout(() => this.save(), 200);
+  }
 
   getState(): RoomState {
     return this.state;
@@ -30,6 +76,7 @@ class RoomStore {
     const result = applyAction(this.state, action, { now: Date.now(), newId: () => randomUUID().slice(0, 8) });
     if (!result.ok) return result;
     this.state = result.state;
+    this.scheduleSave();
     this.syncTimer();
     for (const fn of this.listeners) fn(this.state);
     return result;

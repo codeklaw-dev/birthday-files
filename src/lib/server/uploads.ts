@@ -10,11 +10,10 @@ import { UPLOAD_NAME, type MediaKind } from "@/lib/game/media";
 /**
  * Guest photo/video uploads, stored on the server's disk.
  *
- * MOCK-GRADE STORAGE, like the in-memory room: files live in UPLOAD_DIR
- * (default `.data/uploads`) and disappear when the host's disk does, e.g. on a
- * Railway redeploy without a volume. Milestone 4 moves this to Supabase Storage.
+ * Files live in UPLOAD_DIR (default DATA_DIR/uploads). On Railway DATA_DIR is a
+ * mounted volume, so uploads survive restarts and redeploys.
  */
-export const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), ".data", "uploads");
+export const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.env.DATA_DIR || path.join(process.cwd(), ".data"), "uploads");
 
 export const UPLOAD_LIMITS = {
   imageBytes: 15 * 1024 * 1024,
