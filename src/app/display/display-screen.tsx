@@ -3,13 +3,13 @@
 import Image from "next/image";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Crown } from "lucide-react";
 import { KeyGate } from "@/components/key-gate";
 import { Balloons, Streamers } from "@/components/party";
 import { cx, TILE } from "@/components/ui";
 import { mediaSrc } from "@/lib/client/upload";
 import type { ConnectionStatus } from "@/lib/client/use-room";
-import type { Bilingual, Lang, Player } from "@/lib/game/types";
+import type { Player } from "@/lib/game/types";
 import cakeArt from "@/assets/party/cake.png";
 import discoBall from "@/assets/party/disco-ball.png";
 import logo from "@/assets/party/logo.png";
@@ -69,8 +69,7 @@ function Stage({ displayKey }: { displayKey: string }) {
   const { view, status, clockOffset } = useRoom("display", { hostKey: displayKey });
   const joinUrl = joinUrlFor(view);
 
-  // Hand each new host line to Casper. The mock adapter is silent, so the
-  // captions below are the whole experience until the real adapter exists.
+  // Casper's lines still go to the voice adapter (silent today), but the TV no longer shows them as captions.
   const line = view?.hostLine;
   const lang = view?.hostLang;
   useEffect(() => {
@@ -82,26 +81,30 @@ function Stage({ displayKey }: { displayKey: string }) {
 
   return (
     <main className="party-stage relative flex h-dvh flex-col overflow-hidden">
+      <FallingConfetti />
+      <Sparkles />
       <header className="relative z-10 flex items-center justify-between gap-[2vw] px-[3vw] pt-[2.2vh]">
-        <Image src={logo} alt={EVENT.title} preload sizes="240px" className="h-[9vh] w-auto -rotate-3 drop-shadow-[0_8px_12px_rgb(0_0_0/0.3)]" />
+        <Image src={logo} alt={EVENT.title} preload sizes="240px" className="h-[9vh] w-auto origin-left animate-wiggle drop-shadow-[0_8px_12px_rgb(0_0_0/0.3)]" />
         <div className="flex items-center gap-[1.2vw] text-[1.6vh] font-semibold">
           {view && view.phase !== "lobby" && joinUrl && (
-            <span className="rounded-full bg-white px-[1.2vw] py-[0.8vh] text-party-ink">
+            <span className="rotate-1 rounded-full bg-white px-[1.2vw] py-[0.8vh] text-party-ink shadow-[0_0.4vh_0_rgb(0_0_0/0.2)]">
               Join at <span className="font-bold text-party-purple">{joinUrl.replace(/^https?:\/\//, "")}</span>
             </span>
           )}
-          <span className="rounded-full bg-party-ink/35 px-[1.2vw] py-[0.8vh]">{view?.players.length ?? 0} players</span>
+          <span className="-rotate-1 rounded-full bg-party-sun px-[1.2vw] py-[0.8vh] text-party-ink shadow-[0_0.4vh_0_rgb(0_0_0/0.2)]">
+            {view?.players.length ?? 0} players
+          </span>
           <LivePill status={status} />
         </div>
       </header>
 
-      <section className="relative z-10 flex min-h-0 flex-1 flex-col px-[3vw] py-[2.5vh]">
+      <section className="relative z-10 flex min-h-0 flex-1 flex-col px-[3vw] pb-[3.5vh] pt-[2vh]">
         {!view ? (
-          <p className="m-auto font-party text-[4vh]">Warming up the stage…</p>
+          <p className="m-auto animate-wiggle font-party text-[5vh]">Warming up the stage…</p>
         ) : view.phase === "lobby" ? (
           <Lobby view={view} joinUrl={joinUrl} />
         ) : view.phase === "question" || view.phase === "reveal" ? (
-          <QuestionBoard view={view} clockOffset={clockOffset} />
+          <QuestionBoard key={`${view.questionIndex}-${view.phase}`} view={view} clockOffset={clockOffset} />
         ) : view.phase === "leaderboard" ? (
           <Standings players={view.players} />
         ) : view.phase === "messages" ? (
@@ -112,8 +115,6 @@ function Stage({ displayKey }: { displayKey: string }) {
           <Finale view={view} />
         )}
       </section>
-
-      {view && <HostBar line={view.hostLine} lang={view.hostLang} />}
     </main>
   );
 }
@@ -122,29 +123,80 @@ function LivePill({ status }: { status: ConnectionStatus }) {
   const label = { live: "Live", connecting: "Connecting…", reconnecting: "Reconnecting…" }[status];
   return (
     <span role="status" className="inline-flex items-center gap-[0.5vw] rounded-full bg-party-ink/35 px-[1.2vw] py-[0.8vh] font-mono uppercase tracking-widest">
-      <span className={cx("size-[1.2vh] rounded-full", status === "live" ? "bg-party-mint" : "animate-pulse bg-party-sun")} />
+      <span className={cx("size-[1.2vh] rounded-full", status === "live" ? "animate-pulse bg-party-mint" : "animate-pulse bg-party-sun")} />
       {label}
     </span>
   );
 }
 
-/** Casper's caption bar along the bottom of the TV. */
-function HostBar({ line, lang }: { line: Bilingual; lang: Lang | "both" }) {
-  const show: Lang[] = lang === "both" ? ["en", "bn"] : [lang];
+const PARTY = ["#ff4f81", "#23aae1", "#ffc93c", "#2bc48a", "#ffffff", "#fff791", "#e0a1e6"];
+
+/** Slow paper confetti drifting down behind every screen. Positions are fixed so the server and TV agree. */
+function FallingConfetti({ count = 26 }: { count?: number }) {
   return (
-    <footer className="relative z-10 mx-[3vw] mb-[2.5vh] flex items-center gap-[1.5vw] rounded-[2.5vh] bg-party-ink/55 px-[2vw] py-[1.8vh]" aria-live="polite">
-      <div aria-hidden className="grid size-[7vh] shrink-0 place-items-center rounded-full bg-party-yellow font-party text-[3.5vh] text-party-ink shadow-[0_0.5vh_0_rgb(0_0_0/0.25)]">
-        C
-      </div>
-      <div className="min-w-0">
-        <div className="font-mono text-[1.4vh] font-semibold uppercase tracking-[0.3em] text-party-yellow">Casper · host</div>
-        {show.map((l) => (
-          <p key={l} lang={l} className={cx("text-[2.6vh] leading-snug", l === "bn" ? "font-bangla" : "font-semibold", l === "bn" && lang === "both" && "text-white/80")}>
-            {line[l]}
-          </p>
-        ))}
-      </div>
-    </footer>
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      {Array.from({ length: count }, (_, i) => (
+        <span
+          key={i}
+          className="absolute -top-[6vh] animate-fall rounded-[0.3vh] opacity-80"
+          style={{
+            left: `${(i * 41 + 7) % 100}%`,
+            width: `${0.8 + (i % 3) * 0.4}vh`,
+            height: `${1.4 + (i % 4) * 0.5}vh`,
+            background: PARTY[i % PARTY.length],
+            animationDelay: `${-((i * 1.7) % 12)}s`,
+            animationDuration: `${10 + (i % 6) * 1.5}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Twinkling four-point stars scattered around the edges. */
+function Sparkles() {
+  const spots = [
+    [6, 22], [94, 18], [12, 78], [88, 70], [48, 10], [70, 88], [30, 90], [97, 45], [3, 50],
+  ];
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      {spots.map(([x, y], i) => (
+        <svg
+          key={i}
+          viewBox="0 0 24 24"
+          className="absolute animate-twinkle"
+          style={{ left: `${x}%`, top: `${y}%`, width: `${2 + (i % 3)}vh`, animationDelay: `${(i * 0.37) % 1.8}s` }}
+        >
+          <path d="M12 0 C13 8 16 11 24 12 C16 13 13 16 12 24 C11 16 8 13 0 12 C8 11 11 8 12 0Z" fill={i % 2 ? "#fff791" : "#ffffff"} />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+/** A one-off burst of confetti from the centre, for big moments. */
+function Burst() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      {Array.from({ length: 36 }, (_, i) => {
+        const angle = (i / 36) * Math.PI * 2;
+        const dist = 30 + (i % 5) * 8;
+        return (
+          <span
+            key={i}
+            className="absolute left-1/2 top-1/2 h-[1.8vh] w-[1vh] rounded-[0.3vh]"
+            style={
+              {
+                background: PARTY[i % PARTY.length],
+                animation: `burst 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) ${(i % 6) * 0.03}s both`,
+                "--bx": `${Math.cos(angle) * dist}vw`,
+                "--by": `${Math.sin(angle) * dist * 0.8}vh`,
+              } as React.CSSProperties
+            }
+          />
+        );
+      })}
+    </div>
   );
 }
 
@@ -160,12 +212,19 @@ function Qr({ url }: { url: string }) {
     };
   }, [url]);
   return (
-    <div className="aspect-square h-[42vh] max-w-full rotate-2 rounded-[3vh] bg-white p-[1.5vh] shadow-[0_1.5vh_0_rgb(94_31_107/0.45)]">
-      {/* eslint-disable-next-line @next/next/no-img-element -- data URL, nothing to optimise */}
-      {src ? <img src={src} alt={`QR code to join at ${url}`} className="size-full" /> : <div className="size-full animate-pulse rounded-[2vh] bg-party-purple/10" />}
+    <div className="relative">
+      <div className="aspect-square h-[42vh] max-w-full rotate-2 rounded-[3vh] bg-white p-[1.5vh] shadow-[0_1.5vh_0_rgb(94_31_107/0.45)]">
+        {/* eslint-disable-next-line @next/next/no-img-element -- data URL, nothing to optimise */}
+        {src ? <img src={src} alt={`QR code to join at ${url}`} className="size-full" /> : <div className="size-full animate-pulse rounded-[2vh] bg-party-purple/10" />}
+      </div>
+      <span className="absolute -left-[3vw] -top-[2.5vh] origin-center animate-wiggle rounded-full bg-party-pink px-[1.4vw] py-[1vh] font-party text-[3.2vh] text-white shadow-[0_0.6vh_0_rgb(0_0_0/0.25)]">
+        Scan me!
+      </span>
     </div>
   );
 }
+
+const CHIP_TONES = ["bg-party-pink text-white", "bg-party-sky text-party-ink", "bg-party-sun text-party-ink", "bg-party-mint text-party-ink", "bg-white text-party-ink", "bg-party-lilac text-party-ink"];
 
 function Lobby({ view, joinUrl }: { view: RoomView; joinUrl: string | null }) {
   const players = [...view.players].sort((a, b) => a.joinedAt - b.joinedAt);
@@ -175,35 +234,39 @@ function Lobby({ view, joinUrl }: { view: RoomView; joinUrl: string | null }) {
       <div className="relative flex min-h-0 flex-col">
         <div className="flex items-end gap-[2vw]">
           <div>
-            <p className="inline-block rounded-full bg-white/15 px-[1.2vw] py-[0.6vh] font-mono text-[1.6vh] font-semibold uppercase tracking-[0.3em] text-party-yellow">
-              Tonight&apos;s subject
+            <p className="inline-block -rotate-2 rounded-full bg-party-sun px-[1.2vw] py-[0.6vh] font-mono text-[1.6vh] font-bold uppercase tracking-[0.3em] text-party-ink">
+              It&apos;s party time for
             </p>
-            <h1 className="font-party text-[19vh] leading-[0.9] drop-shadow-[0_0.8vh_0_rgb(255_201_60/0.9)]">{EVENT.guestOfHonour}</h1>
+            <h1 className="origin-bottom-left animate-wiggle font-party text-[19vh] leading-[0.9] drop-shadow-[0_0.8vh_0_rgb(255_201_60/0.9)]">{EVENT.guestOfHonour}</h1>
           </div>
-          <Image src={mezPhoto} alt="" sizes="300px" className="mb-[1vh] h-[24vh] w-auto drop-shadow-[0_1vh_1.5vh_rgb(0_0_0/0.35)]" />
+          <Image src={mezPhoto} alt="" sizes="300px" className="mb-[1vh] h-[24vh] w-auto animate-float drop-shadow-[0_1vh_1.5vh_rgb(0_0_0/0.35)]" />
         </div>
-        <p className="mt-[2vh] max-w-[46vw] text-[2.8vh] font-semibold">
-          A live game show all about {EVENT.guestOfHonour}. Every guest is a detective. Grab your phone and join in!
+        <p className="mt-[2vh] max-w-[46vw] text-[2.9vh] font-semibold">
+          A live game show all about {EVENT.guestOfHonour}. Grab your phone, scan the code and get ready to play!
         </p>
-        <div className="mt-[3.5vh] font-mono text-[1.7vh] font-semibold uppercase tracking-[0.3em] text-party-yellow">
+        <div className="mt-[3.5vh] font-mono text-[1.7vh] font-bold uppercase tracking-[0.3em] text-party-yellow">
           Detectives in the room · {players.length}
         </div>
-        <ul className="mt-[1.2vh] flex max-h-[22vh] flex-wrap gap-[0.8vw] overflow-hidden">
-          {players.length === 0 && <li className="text-[2.6vh] text-white/85">Waiting for the first detective…</li>}
-          {players.map((p) => (
-            <li key={p.id} className="animate-pop rounded-full bg-white px-[1.2vw] py-[0.8vh] text-[2.4vh] font-bold text-party-ink shadow-[0_0.5vh_0_rgb(0_0_0/0.2)]">
+        <ul className="mt-[1.4vh] flex max-h-[22vh] flex-wrap gap-[0.9vw] overflow-hidden p-[0.5vh]">
+          {players.length === 0 && <li className="animate-pulse text-[2.6vh] text-white/85">Waiting for the first detective…</li>}
+          {players.map((p, i) => (
+            <li
+              key={p.id}
+              className={cx("animate-bounce-in rounded-full px-[1.3vw] py-[0.9vh] text-[2.5vh] font-bold shadow-[0_0.5vh_0_rgb(0_0_0/0.22)]", CHIP_TONES[i % CHIP_TONES.length])}
+              style={{ rotate: `${((i * 7) % 5) - 2}deg` }}
+            >
               <span aria-hidden>{p.avatar}</span> {p.name}
             </li>
           ))}
         </ul>
       </div>
       <div className="relative flex flex-col items-center gap-[2.5vh] text-center">
-        <Image src={discoBall} alt="" sizes="200px" className="absolute -top-[10vh] -right-[2vw] h-[16vh] w-auto origin-top animate-sway" />
-        <Balloons className="absolute -left-[3vw] top-[2vh] h-[22vh] w-auto animate-float" />
+        <Image src={discoBall} alt="" sizes="200px" className="absolute -right-[2vw] -top-[11vh] h-[17vh] w-auto origin-top animate-sway" />
+        <Balloons className="absolute -left-[4vw] top-[4vh] h-[24vh] w-auto animate-float" />
         {joinUrl && <Qr url={joinUrl} />}
         <div>
-          <div className="font-party text-[3.6vh]">Scan to join the game</div>
-          <div className="mt-[1vh] inline-block break-all rounded-full bg-party-yellow px-[1.5vw] py-[0.8vh] font-mono text-[2.4vh] font-bold text-party-ink">
+          <div className="font-party text-[3.6vh]">Join the game</div>
+          <div className="mt-[1vh] inline-block -rotate-1 break-all rounded-full bg-party-yellow px-[1.5vw] py-[0.8vh] font-mono text-[2.4vh] font-bold text-party-ink shadow-[0_0.5vh_0_rgb(0_0_0/0.2)]">
             {joinUrl?.replace(/^https?:\/\//, "") ?? "…"}
           </div>
         </div>
@@ -222,67 +285,77 @@ function QuestionBoard({ view, clockOffset }: { view: RoomView; clockOffset: num
   const urgent = left !== null && left <= 5;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-[2.5vh]">
-      <div className="flex items-center justify-between gap-[2vw]">
-        <span className="rounded-full bg-party-ink/35 px-[1.4vw] py-[0.8vh] font-mono text-[2vh] font-semibold uppercase tracking-[0.25em]">
-          Question {view.questionIndex + 1} of {view.totalQuestions}
-        </span>
-        <div className="flex items-center gap-[1.5vw]">
-          <span className="rounded-full bg-white px-[1.4vw] py-[0.8vh] text-[2.2vh] font-bold text-party-ink">
-            {view.answeredCount} of {view.players.length} answered
+    <div className="relative flex min-h-0 flex-1 flex-col gap-[2.5vh]">
+      {revealed && <Burst />}
+      <div className="flex items-start justify-between gap-[2vw]">
+        <div className="relative flex-1 -rotate-1 rounded-[3vh] bg-white px-[2.2vw] py-[2.2vh] text-party-ink shadow-[0_1vh_0_rgb(94_31_107/0.45)]">
+          <span className="absolute -top-[2vh] left-[2vw] rotate-[-4deg] rounded-full bg-party-pink px-[1.2vw] py-[0.6vh] font-mono text-[1.8vh] font-bold uppercase tracking-[0.25em] text-white">
+            Question {view.questionIndex + 1} of {view.totalQuestions}
           </span>
-          {!revealed && (
-            <span
-              aria-label="Seconds left"
-              className={cx(
-                "grid size-[11vh] place-items-center rounded-full font-party text-[5.5vh] tabular-nums shadow-[0_0.8vh_0_rgb(0_0_0/0.25)]",
-                urgent ? "animate-pulse bg-party-berry text-white" : "bg-party-yellow text-party-ink",
-              )}
-            >
-              {left ?? "–"}
+          <h1 className="font-party text-[6vh] leading-[1.1] [text-wrap:balance]">{q.prompt}</h1>
+        </div>
+        <div className="flex flex-col items-center gap-[1.2vh]">
+          {!revealed ? (
+            <span aria-label="Seconds left" className="relative grid size-[14vh] place-items-center">
+              <span className={cx("absolute inset-0 animate-spin-slow rounded-full border-[0.8vh] border-dashed", urgent ? "border-party-berry" : "border-party-yellow")} />
+              <span
+                className={cx(
+                  "grid size-[11vh] place-items-center rounded-full font-party text-[5.5vh] tabular-nums shadow-[0_0.8vh_0_rgb(0_0_0/0.25)]",
+                  urgent ? "animate-pulse bg-party-berry text-white" : "bg-party-yellow text-party-ink",
+                )}
+              >
+                {left ?? "–"}
+              </span>
+            </span>
+          ) : (
+            <span className="animate-bounce-in rotate-3 rounded-[2vh] bg-party-mint px-[1.5vw] py-[1.2vh] font-party text-[3.6vh] text-party-ink shadow-[0_0.8vh_0_rgb(0_0_0/0.25)]">
+              The answer!
             </span>
           )}
+          <span className="rounded-full bg-party-ink/40 px-[1vw] py-[0.6vh] text-[1.9vh] font-semibold">
+            {view.answeredCount} of {view.players.length} answered
+          </span>
         </div>
       </div>
 
       {!revealed && (
-        <div className="h-[1.2vh] overflow-hidden rounded-full bg-white/20" aria-hidden>
+        <div className="h-[1.4vh] overflow-hidden rounded-full bg-white/20" aria-hidden>
           <div
-            className={cx("h-full rounded-full transition-[width] duration-200 ease-linear", urgent ? "bg-party-berry" : "bg-party-yellow")}
+            className={cx("h-full rounded-full transition-[width] duration-200 ease-linear", urgent ? "bg-party-berry" : "bg-gradient-to-r from-party-pink via-party-sun to-party-mint")}
             style={{ width: `${leftMs === null ? 100 : (leftMs / (q.seconds * 1000)) * 100}%` }}
           />
         </div>
       )}
 
-      <h1 className="font-party text-[6.5vh] leading-[1.1] [text-wrap:balance]">{q.prompt}</h1>
-
-      <ul className="grid min-h-0 flex-1 grid-cols-2 gap-[1.6vw]">
+      <ul className="grid min-h-0 flex-1 grid-cols-2 gap-[1.8vw] p-[1vh]">
         {q.options.map((opt, i) => {
           const { Icon, bg } = TILE[i % 4];
           const correct = revealed && q.correctIndex === i;
           const count = q.tally?.[i] ?? 0;
           return (
-            <li
-              key={i}
-              className={cx(
-                "relative flex items-center gap-[1.5vw] rounded-[3.5vh] px-[2vw] py-[2vh] text-[4.6vh] font-extrabold leading-tight text-party-ink transition duration-300",
-                "shadow-[0_1vh_0_rgb(0_0_0/0.22)]",
-                bg,
-                revealed && !correct && "opacity-30 saturate-50",
-                correct && "animate-pop ring-[1vh] ring-white",
-              )}
-            >
-              <span aria-hidden className="grid size-[10vh] shrink-0 place-items-center rounded-full bg-white/45">
-                <Icon className="size-[5.5vh]" fill="currentColor" strokeWidth={2} />
-              </span>
-              <span className="min-w-0 flex-1">{opt}</span>
-              {revealed && (
-                <span className="flex items-center gap-[0.5vw] rounded-full bg-white px-[1.2vw] py-[0.6vh] font-mono text-[3vh] tabular-nums">
-                  {correct && <Check aria-hidden className="size-[3.5vh] text-party-green" strokeWidth={3} />}
-                  {count}
-                  <span className="sr-only"> of {total} answers</span>
+            <li key={i} className="animate-bounce-in" style={{ animationDelay: revealed ? "0ms" : `${i * 90}ms` }}>
+              <div
+                className={cx(
+                  "relative flex h-full items-center gap-[1.5vw] rounded-[3.5vh] px-[2vw] py-[2vh] text-[4.6vh] font-extrabold leading-tight text-party-ink transition duration-300",
+                  "shadow-[0_1vh_0_rgb(0_0_0/0.22)]",
+                  bg,
+                  revealed && !correct && "scale-95 opacity-30 saturate-50",
+                  correct && "animate-wiggle ring-[1vh] ring-white",
+                )}
+                style={correct ? undefined : { rotate: `${i % 2 ? 1 : -1}deg` }}
+              >
+                <span aria-hidden className="grid size-[10vh] shrink-0 place-items-center rounded-full bg-white/45">
+                  <Icon className="size-[5.5vh]" fill="currentColor" strokeWidth={2} />
                 </span>
-              )}
+                <span className="min-w-0 flex-1">{opt}</span>
+                {revealed && (
+                  <span className="flex items-center gap-[0.5vw] rounded-full bg-white px-[1.2vw] py-[0.6vh] font-mono text-[3vh] tabular-nums">
+                    {correct && <Check aria-hidden className="size-[3.5vh] text-party-green" strokeWidth={3} />}
+                    {count}
+                    <span className="sr-only"> of {total} answers</span>
+                  </span>
+                )}
+              </div>
             </li>
           );
         })}
@@ -291,31 +364,33 @@ function QuestionBoard({ view, clockOffset }: { view: RoomView; clockOffset: num
   );
 }
 
+const RANK_TONES = ["bg-party-yellow", "bg-party-sky", "bg-party-pink", "bg-white"];
+
 function Standings({ players }: { players: Player[] }) {
   const rows = players.slice(0, 7);
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[70vw] flex-1 flex-col gap-[2.5vh]">
-      <h1 className="text-center font-party text-[8vh] leading-none">Standings</h1>
+    <div className="mx-auto flex min-h-0 w-full max-w-[72vw] flex-1 flex-col gap-[2.5vh]">
+      <h1 className="text-center font-party text-[8vh] leading-none drop-shadow-[0_0.7vh_0_rgb(255_201_60/0.9)]">Who&apos;s winning?</h1>
       {rows.length === 0 ? (
         <p className="m-auto text-[3vh]">No detectives yet.</p>
       ) : (
-        <ol className="flex min-h-0 flex-1 flex-col gap-[1.4vh] overflow-hidden">
+        <ol className="flex min-h-0 flex-1 flex-col gap-[1.4vh] overflow-visible">
           {rows.map((p, i) => (
             <li
               key={p.id}
-              style={{ animationDelay: `${i * 70}ms` }}
+              style={{ animationDelay: `${i * 110}ms`, rotate: `${i % 2 ? 0.6 : -0.6}deg` }}
               className={cx(
-                "flex animate-rise items-center gap-[1.5vw] rounded-[2.5vh] px-[2vw] py-[1.3vh] text-[3.6vh] font-bold text-party-ink shadow-[0_0.6vh_0_rgb(0_0_0/0.2)]",
-                i === 0 ? "bg-party-yellow" : "bg-white",
+                "relative flex animate-bounce-in items-center gap-[1.5vw] rounded-[2.5vh] px-[2vw] py-[1.3vh] text-[3.6vh] font-bold text-party-ink shadow-[0_0.6vh_0_rgb(0_0_0/0.22)]",
+                RANK_TONES[Math.min(i, 3)],
+                i === 0 && "scale-[1.03]",
               )}
             >
-              <span className={cx("grid size-[6vh] shrink-0 place-items-center rounded-full font-party text-[3.2vh]", i === 0 ? "bg-party-ink text-party-yellow" : "bg-party-purple/15 text-party-purple")}>
-                {i + 1}
-              </span>
-              <span aria-hidden className="text-[4vh]">{p.avatar}</span>
+              {i === 0 && <Crown aria-hidden className="absolute -left-[1.5vw] -top-[3vh] size-[6vh] -rotate-12 animate-wiggle fill-party-sun text-party-ink" strokeWidth={1.5} />}
+              <span className="grid size-[6vh] shrink-0 place-items-center rounded-full bg-party-ink font-party text-[3.2vh] text-white">{i + 1}</span>
+              <span aria-hidden className="text-[4.2vh]">{p.avatar}</span>
               <span className="min-w-0 flex-1 truncate">{p.name}</span>
-              {p.remote && <span className="rounded-full bg-party-sky/25 px-[0.9vw] py-[0.3vh] font-mono text-[1.6vh] uppercase tracking-widest">virtual</span>}
-              <span className="font-party text-[4.2vh] tabular-nums text-party-purple">{p.score}</span>
+              {p.remote && <span className="rounded-full bg-white/70 px-[0.9vw] py-[0.3vh] font-mono text-[1.6vh] uppercase tracking-widest">virtual</span>}
+              <span className="font-party text-[4.4vh] tabular-nums">{p.score}</span>
             </li>
           ))}
         </ol>
@@ -324,31 +399,34 @@ function Standings({ players }: { players: Player[] }) {
   );
 }
 
+const TAPE = ["bg-party-pink/70", "bg-party-sky/70", "bg-party-sun/80", "bg-party-mint/70"];
+
 function MessageWall({ view }: { view: RoomView }) {
   const notes = view.messages.slice(-6).reverse();
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-[2.5vh]">
+    <div className="flex min-h-0 flex-1 flex-col gap-[3vh]">
       <h1 className="font-party text-[7vh] leading-none">
-        Wishes for <span className="text-party-yellow">{EVENT.guestOfHonour}</span>
+        Wishes for <span className="inline-block animate-wiggle text-party-yellow">{EVENT.guestOfHonour}</span> 💌
       </h1>
       {notes.length === 0 ? (
         <p className="m-auto text-[3vh] font-semibold">No wishes revealed yet. They appear here once the host approves them.</p>
       ) : (
-        <ul className="grid min-h-0 flex-1 auto-rows-min grid-cols-3 gap-[1.6vw] overflow-hidden">
+        <ul className="grid min-h-0 flex-1 auto-rows-min grid-cols-3 gap-[2vw] overflow-hidden px-[1vw] pt-[2vh]">
           {notes.map((m, i) => (
             <li
               key={m.id}
-              className="flex animate-rise flex-col rounded-[3vh] bg-white p-[2vh] text-party-ink shadow-[0_1vh_0_rgb(94_31_107/0.4)]"
-              style={{ rotate: `${((i % 3) - 1) * 1.2}deg`, animationDelay: `${i * 90}ms` }}
+              className="relative flex animate-bounce-in flex-col bg-white p-[1.6vh] pb-[2.2vh] text-party-ink shadow-[0_1.2vh_2vh_rgb(43_18_51/0.35)]"
+              style={{ rotate: `${[-2.5, 1.5, -1, 2.2, -1.8, 1][i % 6]}deg`, animationDelay: `${i * 120}ms` }}
             >
+              <span aria-hidden className={cx("absolute -top-[1.6vh] left-1/2 h-[3.2vh] w-[9vw] -translate-x-1/2 rotate-[-3deg]", TAPE[i % TAPE.length])} />
               {m.media && m.media.length > 0 && (
-                <div className={cx("mb-[1.5vh] grid gap-[0.6vw]", m.media.length > 1 && "grid-cols-2")}>
+                <div className={cx("mb-[1.5vh] grid gap-[0.5vw]", m.media.length > 1 && "grid-cols-2")}>
                   {m.media.slice(0, 4).map((x) =>
                     x.kind === "video" ? (
-                      <video key={x.url} src={mediaSrc(x.url)} autoPlay muted loop playsInline className="max-h-[26vh] w-full rounded-[2vh] bg-black object-cover" />
+                      <video key={x.url} src={mediaSrc(x.url)} autoPlay muted loop playsInline className="max-h-[26vh] w-full bg-black object-cover" />
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element -- guest upload served by our API
-                      <img key={x.url} src={mediaSrc(x.url)} alt="" className={cx("w-full rounded-[2vh] object-cover", m.media!.length > 1 ? "aspect-square" : "max-h-[26vh]")} />
+                      <img key={x.url} src={mediaSrc(x.url)} alt="" className={cx("w-full object-cover", m.media!.length > 1 ? "aspect-square" : "max-h-[26vh]")} />
                     ),
                   )}
                 </div>
@@ -378,20 +456,20 @@ function Cake({ view }: { view: RoomView }) {
   const out = lit === 0;
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center gap-[3vh] text-center">
-      {out && <Confetti />}
-      <h1 className="font-party text-[8vh] leading-none">
+      {out && <Burst />}
+      <h1 className={cx("font-party text-[8vh] leading-none drop-shadow-[0_0.7vh_0_rgb(0_0_0/0.2)]", out && "animate-bounce-in")}>
         {out ? (
           <>
-            Happy birthday, <span className="text-party-yellow">{EVENT.guestOfHonour}!</span>
+            Happy birthday, <span className="inline-block animate-wiggle text-party-yellow">{EVENT.guestOfHonour}!</span>
           </>
         ) : (
           "Tap your phones. Blow them out!"
         )}
       </h1>
       <div className="relative flex items-end justify-center gap-[3vw]">
-        {out && <Image src={partyPopper} alt="" sizes="260px" className="h-[24vh] w-auto -scale-x-100" />}
-        <Image src={cakeArt} alt="" sizes="520px" className="h-[42vh] w-auto drop-shadow-[0_1.5vh_2vh_rgb(0_0_0/0.3)]" />
-        {out && <Image src={partyPopper} alt="" sizes="260px" className="h-[24vh] w-auto" />}
+        {out && <Image src={partyPopper} alt="" sizes="260px" className="h-[24vh] w-auto -scale-x-100 animate-bounce-in" />}
+        <Image src={cakeArt} alt="" sizes="520px" className={cx("h-[42vh] w-auto drop-shadow-[0_1.5vh_2vh_rgb(0_0_0/0.3)]", out ? "animate-wiggle" : "animate-float")} />
+        {out && <Image src={partyPopper} alt="" sizes="260px" className="h-[24vh] w-auto animate-bounce-in" />}
       </div>
       <div
         role="img"
@@ -411,9 +489,7 @@ function Cake({ view }: { view: RoomView }) {
             </div>
           ))}
         </div>
-        <span className="font-mono text-[2.2vh] font-semibold uppercase tracking-[0.25em]">
-          {out ? "Make a wish" : `${lit} of ${candles} still lit`}
-        </span>
+        <span className="font-mono text-[2.2vh] font-semibold uppercase tracking-[0.25em]">{out ? "Make a wish" : `${lit} of ${candles} still lit`}</span>
       </div>
     </div>
   );
@@ -428,14 +504,16 @@ function Finale({ view }: { view: RoomView }) {
   ];
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center gap-[4vh] text-center">
-      <Confetti />
-      <div>
-        <div className="stamp bg-white text-[2.4vh] text-party-berry">Case closed</div>
-        <h1 className="mt-[2.5vh] font-party text-[10vh] leading-none drop-shadow-[0_0.8vh_0_rgb(255_201_60/0.9)]">Top detectives</h1>
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-[10vh] bottom-0 bg-[conic-gradient(from_200deg_at_50%_0%,transparent_0deg,rgb(255_247_145/0.22)_12deg,transparent_24deg,transparent_40deg,rgb(255_255_255/0.16)_52deg,transparent_64deg,transparent_80deg,rgb(255_247_145/0.22)_92deg,transparent_104deg)]" />
+      <Burst />
+      <div className="relative">
+        <div className="stamp animate-bounce-in bg-white text-[2.4vh] text-party-berry">Case closed</div>
+        <h1 className="mt-[2.5vh] animate-bounce-in font-party text-[10vh] leading-none drop-shadow-[0_0.8vh_0_rgb(255_201_60/0.9)]">Top detectives</h1>
       </div>
-      <ol className="flex items-end gap-[1.5vw]">
-        {podium.map(({ p, h, place, tone }) => (
-          <li key={place} className="flex w-[18vw] flex-col items-center">
+      <ol className="relative flex items-end gap-[1.5vw]">
+        {podium.map(({ p, h, place, tone }, i) => (
+          <li key={place} className="flex w-[18vw] animate-bounce-in flex-col items-center" style={{ animationDelay: `${300 + i * 200}ms` }}>
+            {place === 1 && <Crown aria-hidden className="mb-[0.5vh] size-[7vh] animate-wiggle fill-party-sun text-party-ink" strokeWidth={1.5} />}
             <div className="text-[7vh]" aria-hidden>
               {p?.avatar ?? "·"}
             </div>
@@ -447,28 +525,6 @@ function Finale({ view }: { view: RoomView }) {
           </li>
         ))}
       </ol>
-    </div>
-  );
-}
-
-const CONFETTI_COLOURS = ["#ff4f81", "#23aae1", "#ffc93c", "#2bc48a", "#ffffff", "#fff791"];
-function Confetti() {
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {Array.from({ length: 40 }, (_, i) => (
-        <span
-          key={i}
-          className="absolute -top-[4vh] animate-drift rounded-[0.3vh]"
-          style={{
-            left: `${(i * 37) % 100}%`,
-            width: `${0.9 + (i % 3) * 0.4}vh`,
-            height: `${1.6 + (i % 4) * 0.5}vh`,
-            background: CONFETTI_COLOURS[i % CONFETTI_COLOURS.length],
-            animationDelay: `${(i * 0.43) % 9}s`,
-            animationDuration: `${7 + (i % 5)}s`,
-          }}
-        />
-      ))}
     </div>
   );
 }
