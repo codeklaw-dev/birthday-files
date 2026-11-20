@@ -96,7 +96,18 @@ function Hero() {
         </h1>
         <p className="mt-1 text-center font-semibold">{EVENT.dateLabel}</p>
 
-        <div className="relative z-10 mt-5 flex flex-col items-center rounded-[1.75rem] bg-party-purple px-6 pb-6 pt-5 text-center text-white shadow-[0_8px_0_rgb(94_31_107/0.35)]">
+        <Image
+          src={mezPhoto}
+          alt={`Little ${EVENT.guestOfHonour} cutting a Happy Birthday cake`}
+          preload
+          sizes="224px"
+          className="relative z-10 mt-4 -mb-8 w-48 drop-shadow-[0_10px_14px_rgb(43_18_51/0.3)] sm:w-56"
+        />
+      </div>
+
+      <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-t-[2.25rem] bg-party-yellow px-5 pb-40 pt-14">
+        <Countdown />
+        <div className="mt-8 flex w-full flex-col items-center rounded-[1.75rem] bg-party-purple px-6 pb-6 pt-5 text-center text-white shadow-[0_8px_0_rgb(94_31_107/0.35)]">
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.3em] text-party-yellow">Calling all detectives</p>
           <p className="mt-2 font-party text-2xl leading-tight">
             Take part in <span className="text-party-yellow">{EVENT.title}</span>!
@@ -110,18 +121,6 @@ function Hero() {
             Count me in!
           </button>
         </div>
-
-        <Image
-          src={mezPhoto}
-          alt={`Little ${EVENT.guestOfHonour} cutting a Happy Birthday cake`}
-          preload
-          sizes="224px"
-          className="relative z-10 mt-4 -mb-8 w-48 drop-shadow-[0_10px_14px_rgb(43_18_51/0.3)] sm:w-56"
-        />
-      </div>
-
-      <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-t-[2.25rem] bg-party-yellow px-5 pb-40 pt-14">
-        <Countdown />
         <div id="guest-flow" className="mt-8 w-full scroll-mt-16">
           <GuestFlow open={flowOpen} setOpen={setFlowOpen} />
         </div>
@@ -347,8 +346,9 @@ function Summons() {
         </h2>
         <Image src={logo} alt={EVENT.title} sizes="256px" className="mt-6 w-60 -rotate-3 drop-shadow-[0_14px_18px_rgb(0_0_0/0.35)]" />
         <p className="mt-6 text-lg">
-          A live game show about {EVENT.guestOfHonour}, hosted by Casper and played from your phone. Bring your memories, your
-          best guesses and your worst-kept secrets.
+          It&apos;s a game show all about {EVENT.guestOfHonour}, and she would love for her friends and family to take part. Show
+          her how much you care and how well you really know her: play the games, share your favourite memories and send her a
+          birthday wish.
         </p>
 
         {showGames ? (
