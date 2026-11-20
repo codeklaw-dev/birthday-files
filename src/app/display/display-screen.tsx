@@ -14,7 +14,7 @@ import discoBall from "@/assets/party/disco-ball.png";
 import logo from "@/assets/party/logo.png";
 import mezPhoto from "@/assets/party/mez-cake-photo.png";
 import partyPopper from "@/assets/party/party-popper.png";
-import { getBrowserVoice, getCasper } from "@/lib/casper";
+import { getCasper, getTvVoice } from "@/lib/casper";
 import { useNow } from "@/lib/client/hooks";
 import { useRoom } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
@@ -101,7 +101,7 @@ const noSubscribe = () => () => {};
  */
 function VoiceToggle({ line, lang }: { line: Bilingual; lang: Lang | "both" }) {
   // Only the browser knows whether it can speak; the server render shows nothing.
-  const voice = useSyncExternalStore(noSubscribe, getBrowserVoice, () => null);
+  const voice = useSyncExternalStore(noSubscribe, getTvVoice, () => null);
   const [on, setOn] = useState(false);
   if (!voice) return null;
   return (

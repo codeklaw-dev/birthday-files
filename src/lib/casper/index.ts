@@ -1,5 +1,5 @@
-import { BrowserVoiceAdapter } from "./browser-adapter";
 import { MockCasperAdapter } from "./mock-adapter";
+import { TvVoiceAdapter } from "./tv-voice";
 import type { CasperAdapter } from "./types";
 
 export type { CasperAdapter, CasperUtterance, CasperSpeechResult, CasperTranscript } from "./types";
@@ -7,16 +7,16 @@ export type { CasperAdapter, CasperUtterance, CasperSpeechResult, CasperTranscri
 let adapter: CasperAdapter | null = null;
 
 /**
- * Single place where Casper's voice is chosen: the browser's built-in speech
- * where the device supports it (free), otherwise the silent mock.
+ * Single place where Casper's voice is chosen: in a browser, the TV voice
+ * (natural ElevenLabs audio, browser speech as fallback); elsewhere the silent mock.
  */
 export function getCasper(): CasperAdapter {
-  adapter ??= BrowserVoiceAdapter.supported() ? new BrowserVoiceAdapter() : new MockCasperAdapter();
+  adapter ??= TvVoiceAdapter.supported() ? new TvVoiceAdapter() : new MockCasperAdapter();
   return adapter;
 }
 
-/** The browser voice, if that is what this device uses (for the TV's voice toggle). */
-export function getBrowserVoice(): BrowserVoiceAdapter | null {
+/** The TV voice, where this device has one (for the TV's "Turn on voice" button). */
+export function getTvVoice(): TvVoiceAdapter | null {
   const a = getCasper();
-  return a instanceof BrowserVoiceAdapter ? a : null;
+  return a instanceof TvVoiceAdapter ? a : null;
 }
