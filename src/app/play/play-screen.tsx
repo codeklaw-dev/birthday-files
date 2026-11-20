@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { WishComposer, PartyField } from "@/components/party";
+import { PartyField } from "@/components/party";
+import { GAME_ART } from "@/components/game-art";
 import { cx, HostLine, Leaderboard, TILE } from "@/components/ui";
 import { useNow, usePlayerToken, useStored } from "@/lib/client/hooks";
 import { useRoom, type ConnectionStatus, type RoomConnection } from "@/lib/client/use-room";
@@ -131,7 +132,6 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
   const rank = view.players.findIndex((p) => p.id === me.id) + 1;
   const [attendance] = useStored("local", "bf.attendance");
   const remote = attendance === "virtual";
-  const sendWish = (author: string, text: string) => room.send({ type: "submitMessage", author, text });
 
   return (
     <div className="flex flex-1 flex-col gap-5">
@@ -157,10 +157,10 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
           body={
             remote
               ? "Playing from afar. Keep this page open: the questions appear here when the host starts the show."
-              : "Watch the big screen. The show starts when the host is ready. Meanwhile, send Mez a wish."
+              : "Watch the big screen. The questions appear here when the host starts the show."
           }
         >
-          <WishComposer defaultAuthor={me.name} onSubmit={sendWish} />
+          <GameLineup />
         </Section>
       )}
 
@@ -192,9 +192,7 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
       )}
 
       {view.phase === "messages" && (
-        <Section title="Message wall" body="Add yours. It shows on the big screen once approved.">
-          <WishComposer defaultAuthor={me.name} onSubmit={sendWish} startOpen />
-        </Section>
+        <Section title="Message wall" body={`Wishes for ${EVENT.guestOfHonour} are being revealed. Eyes on the big screen!`} />
       )}
 
       {view.phase === "cake" && <CakePad room={room} view={view} token={token} />}
@@ -202,6 +200,27 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
       <div className="mt-auto rounded-2xl bg-party-ink/45 p-3">
         <HostLine line={view.hostLine} lang={view.hostLang} />
       </div>
+    </div>
+  );
+}
+
+/** Tonight's games, shown while waiting in the lobby. */
+function GameLineup() {
+  return (
+    <div>
+      <h2 className="mb-3 font-mono text-xs font-semibold uppercase tracking-[0.25em]">Tonight&apos;s games</h2>
+      <ul className="grid grid-cols-2 gap-3">
+        {EVENT.games.map((g) => {
+          const art = GAME_ART[g.id];
+          return (
+            <li key={g.id} className="party-card flex flex-col items-center p-3 text-center">
+              {art && <Image src={art.src} alt={art.alt} sizes="96px" className="h-20 w-auto object-contain" />}
+              <h3 className="mt-2 font-party text-lg leading-tight text-party-purple">{g.name}</h3>
+              <p className="mt-1 text-xs text-party-ink/75">{g.blurb}</p>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

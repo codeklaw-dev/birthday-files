@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Camera, CheckCircle2, ChevronDown, Mic, PenLine, Square, Upload, Video, X } from "lucide-react";
+import { Camera, CheckCircle2, Mic, PenLine, Square, Upload, Video, X } from "lucide-react";
 import { cx } from "@/components/ui";
 import { EVENT } from "@/lib/event";
 
@@ -80,38 +80,6 @@ const WAYS: { mode: Mode; label: string; hint: string; Icon: typeof Video; tone:
   { mode: "voice", label: "Record a voice message", hint: "Up to a minute", Icon: Mic, tone: "bg-party-sun" },
   { mode: "note", label: "Write a note", hint: "A wish, a memory, an inside joke", Icon: PenLine, tone: "bg-party-mint" },
 ];
-
-/** "Send wish" pill that opens the ways to wish (used on /play). */
-export function WishComposer({
-  defaultAuthor = "",
-  onSubmit,
-  startOpen = false,
-}: {
-  defaultAuthor?: string;
-  onSubmit: WishSubmit;
-  startOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(startOpen);
-  return (
-    <div className="flex w-full flex-col items-center gap-3">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls="wish-ways"
-        onClick={() => setOpen((o) => !o)}
-        className="party-pill bg-party-green text-white"
-      >
-        Send wish
-        <ChevronDown aria-hidden className={cx("size-5 transition-transform", open && "rotate-180")} />
-      </button>
-      {open && (
-        <div id="wish-ways" className="w-full animate-rise">
-          <WishWays defaultAuthor={defaultAuthor} onSubmit={onSubmit} />
-        </div>
-      )}
-    </div>
-  );
-}
 
 type Sent = { text: string; mediaWord: string | null };
 

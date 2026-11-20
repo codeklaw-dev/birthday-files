@@ -1,28 +1,18 @@
 "use client";
 
-import Image, { type StaticImageData } from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { PartyPopper, Sparkles, Wifi } from "lucide-react";
 import { Balloons, ProfileForm, Streamers, WishWays, type Profile } from "@/components/party";
+import { GAME_ART } from "@/components/game-art";
 import { cx } from "@/components/ui";
 import { useNow, useStored } from "@/lib/client/hooks";
 import { EVENT } from "@/lib/event";
-import courtroom from "@/assets/party/courtroom.png";
-import detectiveBrain from "@/assets/party/detective-brain.png";
 import discoBall from "@/assets/party/disco-ball.png";
 import logo from "@/assets/party/logo.png";
 import mezPhoto from "@/assets/party/mez-cake-photo.png";
-import mysteryBox from "@/assets/party/mystery-box.png";
-import opinionBubble from "@/assets/party/opinion-bubble.png";
 import partyPopper from "@/assets/party/party-popper.png";
-
-const GAME_ART: Record<string, { src: StaticImageData; alt: string }> = {
-  imposter: { src: detectiveBrain, alt: "A detective brain with a magnifying glass" },
-  trial: { src: courtroom, alt: "A judge's bench with a gavel and scales" },
-  survey: { src: opinionBubble, alt: "A speech bubble that says Your opinion matters" },
-  mystery: { src: mysteryBox, alt: "An open box with a question mark" },
-};
 
 type Attendance = "party" | "virtual";
 
@@ -240,7 +230,7 @@ function GuestFlow({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((
           See you at the party!
         </h3>
         <p className="mt-2 text-party-ink/80">
-          The games run live on the night. Join now to save your detective name, and send {EVENT.guestOfHonour} a wish from the game while you wait.
+          The games run live on the night. Join now to save your detective name, and you&apos;ll be ready when the host starts the show.
         </p>
         <Link href="/play" className="party-pill mt-5 w-full bg-party-green text-white">
           Join the game
