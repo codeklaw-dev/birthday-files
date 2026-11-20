@@ -3,7 +3,7 @@
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { PartyPopper, Wifi } from "lucide-react";
+import { PartyPopper, Sparkles, Wifi } from "lucide-react";
 import { Balloons, ProfileForm, Streamers, WishWays, type Profile } from "@/components/party";
 import { cx } from "@/components/ui";
 import { useNow, useStored } from "@/lib/client/hooks";
@@ -73,6 +73,13 @@ export function InviteScreen() {
 }
 
 function Hero() {
+  // Shared with GuestFlow so the invitation's button can open the wish flow.
+  const [flowOpen, setFlowOpen] = useState(false);
+  const takePart = () => {
+    setFlowOpen(true);
+    setTimeout(() => document.getElementById("guest-flow")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
+
   return (
     <section className="party-light relative px-4 pt-4">
       <Streamers className="absolute inset-x-0 top-24 h-72 w-full" />
@@ -89,6 +96,21 @@ function Hero() {
         </h1>
         <p className="mt-1 text-center font-semibold">{EVENT.dateLabel}</p>
 
+        <div className="relative z-10 mt-5 flex flex-col items-center rounded-[1.75rem] bg-party-purple px-6 pb-6 pt-5 text-center text-white shadow-[0_8px_0_rgb(94_31_107/0.35)]">
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.3em] text-party-yellow">Calling all detectives</p>
+          <p className="mt-2 font-party text-2xl leading-tight">
+            Take part in <span className="text-party-yellow">{EVENT.title}</span>!
+          </p>
+          <p className="mt-2 text-white/90">
+            A live game show all about {EVENT.guestOfHonour}. Crack the clues, out-guess your friends and send a birthday wish. At the
+            party or from afar, there&apos;s a seat for you.
+          </p>
+          <button type="button" onClick={takePart} className="party-pill mt-4 bg-party-yellow text-party-ink">
+            <Sparkles aria-hidden className="size-5" />
+            Count me in!
+          </button>
+        </div>
+
         <Image
           src={mezPhoto}
           alt={`Little ${EVENT.guestOfHonour} cutting a Happy Birthday cake`}
@@ -100,8 +122,8 @@ function Hero() {
 
       <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-t-[2.25rem] bg-party-yellow px-5 pb-40 pt-14">
         <Countdown />
-        <div className="mt-8 w-full">
-          <GuestFlow />
+        <div id="guest-flow" className="mt-8 w-full scroll-mt-16">
+          <GuestFlow open={flowOpen} setOpen={setFlowOpen} />
         </div>
 
         <Balloons className="absolute -left-4 bottom-0 w-28" />
@@ -151,9 +173,8 @@ function Countdown() {
 }
 
 /** Send wish → "Will you be at the party?" → game flow, or profile + wish + games. */
-function GuestFlow() {
+function GuestFlow({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((o: boolean) => boolean)) => void }) {
   const guest = useGuest();
-  const [open, setOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const { attendance, profile } = guest;
 
@@ -261,24 +282,24 @@ function GuestFlow() {
         profile={profile}
         onSubmit={submitMessage}
         onSent={guest.setWished}
+        listFooter={
+          <button
+            type="button"
+            onClick={() => {
+              guest.setWished();
+              setTimeout(scrollToGames, 50);
+            }}
+            className="party-pill w-full bg-party-green text-white"
+          >
+            Complete Wish
+          </button>
+        }
         sentActions={
           <button type="button" onClick={scrollToGames} className="party-pill bg-party-green text-white">
             See tonight&apos;s games
           </button>
         }
       />
-      {!guest.wished && (
-        <button
-          type="button"
-          onClick={() => {
-            guest.setWished();
-            setTimeout(scrollToGames, 50);
-          }}
-          className="mx-auto text-sm font-semibold text-party-plum underline underline-offset-4"
-        >
-          Skip to tonight&apos;s games
-        </button>
-      )}
       {changeAnswer}
     </div>
   );

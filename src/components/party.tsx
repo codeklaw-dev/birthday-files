@@ -127,6 +127,7 @@ export function WishWays({
   onSubmit,
   onSent,
   sentActions,
+  listFooter,
 }: {
   profile?: Profile;
   defaultAuthor?: string;
@@ -134,6 +135,8 @@ export function WishWays({
   onSent?: () => void;
   /** Extra buttons on the confirmation screen, e.g. "See tonight's games". */
   sentActions?: ReactNode;
+  /** Shown under the list of ways to wish, e.g. a "Complete wish" button. */
+  listFooter?: ReactNode;
 }) {
   const [mode, setMode] = useState<Mode | null>(null);
   const [sent, setSent] = useState<Sent | null>(null);
@@ -157,7 +160,8 @@ export function WishWays({
 
   if (!way) {
     return (
-      <ul className="party-card flex flex-col gap-1 p-2" aria-label="Ways to wish">
+      <div className="party-card flex flex-col gap-1 p-2">
+      <ul className="flex flex-col gap-1" aria-label="Ways to wish">
         {WAYS.map((w) => (
           <li key={w.mode}>
             <button
@@ -176,6 +180,8 @@ export function WishWays({
           </li>
         ))}
       </ul>
+      {listFooter && <div className="px-2 pb-2 pt-1">{listFooter}</div>}
+      </div>
     );
   }
 
