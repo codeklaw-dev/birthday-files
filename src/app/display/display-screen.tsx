@@ -2,20 +2,20 @@
 
 import Image from "next/image";
 import QRCode from "qrcode";
-import { useEffect, useState } from "react";
-import { Check, Crown } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { Check, Crown, Volume2, VolumeX } from "lucide-react";
 import { KeyGate } from "@/components/key-gate";
 import { Balloons, Streamers } from "@/components/party";
 import { cx, TILE } from "@/components/ui";
 import { mediaSrc } from "@/lib/client/upload";
 import type { ConnectionStatus } from "@/lib/client/use-room";
-import type { Player } from "@/lib/game/types";
+import type { Bilingual, Lang, Player } from "@/lib/game/types";
 import cakeArt from "@/assets/party/cake.png";
 import discoBall from "@/assets/party/disco-ball.png";
 import logo from "@/assets/party/logo.png";
 import mezPhoto from "@/assets/party/mez-cake-photo.png";
 import partyPopper from "@/assets/party/party-popper.png";
-import { getCasper } from "@/lib/casper";
+import { getBrowserVoice, getCasper } from "@/lib/casper";
 import { useNow, useStored } from "@/lib/client/hooks";
 import { useRoom } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
@@ -69,15 +69,17 @@ function Stage({ displayKey }: { displayKey: string }) {
   const { view, status, clockOffset } = useRoom("display", { hostKey: displayKey });
   const joinUrl = joinUrlFor(view);
 
-  // Casper's lines still go to the voice adapter (silent today), but the TV no longer shows them as captions.
-  const line = view?.hostLine;
+  // Casper speaks each new line out loud (once the voice is turned on); the TV shows no captions.
+  // Keyed on the words, not the object: every room update (a guest joining, an answer) sends a fresh copy of the same line.
+  const en = view?.hostLine.en;
+  const bn = view?.hostLine.bn;
   const lang = view?.hostLang;
   useEffect(() => {
-    if (!line || !lang) return;
+    if (en === undefined || bn === undefined || !lang) return;
     const casper = getCasper();
-    void casper.say({ text: line, lang });
+    void casper.say({ text: { en, bn }, lang });
     return () => casper.stop();
-  }, [line, lang]);
+  }, [en, bn, lang]);
 
   return (
     <main className="party-stage relative flex h-dvh flex-col overflow-hidden">
@@ -94,6 +96,7 @@ function Stage({ displayKey }: { displayKey: string }) {
           <span className="-rotate-1 rounded-full bg-party-sun px-[1.2vw] py-[0.8vh] text-party-ink shadow-[0_0.4vh_0_rgb(0_0_0/0.2)]">
             {view?.players.length ?? 0} players
           </span>
+          {view && <VoiceToggle line={view.hostLine} lang={view.hostLang} />}
           <LivePill status={status} />
         </div>
       </header>
@@ -116,6 +119,42 @@ function Stage({ displayKey }: { displayKey: string }) {
         )}
       </section>
     </main>
+  );
+}
+
+const noSubscribe = () => () => {};
+
+/**
+ * Browsers only let a page speak after a click, so the TV shows "Turn on voice"
+ * until someone presses it. It speaks the current line straight away.
+ */
+function VoiceToggle({ line, lang }: { line: Bilingual; lang: Lang | "both" }) {
+  // Only the browser knows whether it can speak; the server render shows nothing.
+  const voice = useSyncExternalStore(noSubscribe, getBrowserVoice, () => null);
+  const [on, setOn] = useState(false);
+  if (!voice) return null;
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={() => {
+        if (on) {
+          voice.disable();
+          setOn(false);
+        } else {
+          voice.enable();
+          setOn(true);
+          void voice.say({ text: line, lang });
+        }
+      }}
+      className={cx(
+        "inline-flex items-center gap-[0.5vw] rounded-full px-[1.2vw] py-[0.8vh] font-bold shadow-[0_0.4vh_0_rgb(0_0_0/0.2)]",
+        on ? "bg-party-mint text-party-ink" : "animate-wiggle bg-party-pink text-white",
+      )}
+    >
+      {on ? <Volume2 aria-hidden className="size-[2vh]" /> : <VolumeX aria-hidden className="size-[2vh]" />}
+      {on ? "Voice on" : "Turn on voice"}
+    </button>
   );
 }
 
