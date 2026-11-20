@@ -72,7 +72,7 @@ export function useNow(intervalMs = 250): number | null {
 }
 
 /** Everything this phone remembers about its guest (invite answers, profile, game identity). */
-const GUEST_KEYS = ["bf.attendance", "bf.profile", "bf.wished", "bf.token"];
+const GUEST_KEYS = ["bf.attendance", "bf.profile", "bf.wished", "bf.surveyed", "bf.token"];
 
 /** "Not you?": forget the guest on this phone so someone else can start fresh. */
 export function forgetGuest() {

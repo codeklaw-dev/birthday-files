@@ -1,3 +1,4 @@
+import "server-only";
 import type { Question } from "./types";
 
 /**
@@ -35,4 +36,3 @@ export const MOCK_QUESTIONS: Question[] = [
   },
 ];
 
-export const AVATARS = ["🕵️", "🎂", "🎈", "🦄", "🐯", "🪩", "🌶️", "🚀", "🍉", "🎤", "🧁", "🦊"];

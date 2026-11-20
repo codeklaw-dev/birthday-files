@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyAction, createRoom, LIMITS, viewFor } from "@/lib/game/engine";
+import { SOLO_GAMES, SOLO_POINTS } from "@/lib/game/solo-content";
+import { SURVEY_QUESTIONS } from "@/lib/game/survey-content";
 import type { Action, RoomState } from "@/lib/game/types";
 
 let n = 0;
@@ -183,5 +185,46 @@ describe("cake", () => {
     }
     expect(viewFor(s, "display", null, 0).cake.lit).toBe(0);
     expect(err(s, { type: "blow", token: "token-alice" })).toMatch(/already out/);
+  });
+});
+
+describe("before the party and at your own pace", () => {
+  const remote = (s: RoomState, token: string, name: string) => run(s, { type: "join", token, name, avatar: "🎈", remote: true });
+  const imposterKey = SOLO_GAMES.imposter.questions.map((q) => q.correctIndex!);
+
+  it("only lets virtual troopers play solo games, once each, without leaking answers first", () => {
+    let s = remote(join(createRoom(), "token-party", "PartyGuest"), "token-virtual", "Virtual");
+    expect(err(s, { type: "solo/submit", token: "token-party", game: "imposter", answers: imposterKey })).toMatch(/live at the party/);
+    expect(viewFor(s, "player", "token-party", 0).solo).toBeNull();
+    const before = viewFor(s, "player", "token-virtual", 0).solo!;
+    expect(JSON.stringify(before.games)).not.toMatch(/correctIndex/);
+    expect(before.results.imposter).toBeUndefined();
+
+    s = run(s, { type: "solo/submit", token: "token-virtual", game: "imposter", answers: imposterKey });
+    const me = viewFor(s, "player", "token-virtual", 0);
+    expect(me.me!.score).toBe(imposterKey.length * SOLO_POINTS.correct);
+    expect(me.solo!.results.imposter!.items.map((i) => i.correctIndex)).toEqual(imposterKey);
+    expect(err(s, { type: "solo/submit", token: "token-virtual", game: "imposter", answers: imposterKey })).toMatch(/already/);
+    expect(err(s, { type: "solo/submit", token: "token-virtual", game: "trial", answers: [0] })).toMatch(/every question/);
+    expect(err(s, { type: "solo/submit", token: "token-virtual", game: "nope" as never, answers: [] })).toMatch(/Unknown game/);
+  });
+
+  it("scores the survey by how many party guests agreed, and keeps solo points through a reset", () => {
+    const n = SURVEY_QUESTIONS.length;
+    let s = createRoom();
+    s = run(s, { type: "survey/submit", token: "guest-one-token", name: "One", answers: Array(n).fill(0) });
+    s = run(s, { type: "survey/submit", token: "guest-two-token", name: "Two", answers: Array(n).fill(0) });
+    s = run(s, { type: "survey/submit", token: "guest-three-token", name: "Three", answers: Array(n).fill(1) });
+    expect(err(s, { type: "survey/submit", token: "guest-four-token", name: "Four", answers: [0] })).toMatch(/every question/);
+    expect(viewFor(s, "host", null, 0).survey!.tallies[0]).toEqual([2, 1, 0, 0]);
+
+    s = remote(s, "token-virtual", "Virtual");
+    s = run(s, { type: "solo/submit", token: "token-virtual", game: "survey", answers: Array(n).fill(0) });
+    expect(viewFor(s, "player", "token-virtual", 0).me!.score).toBe(n * 67);
+    expect(viewFor(s, "player", "token-virtual", 0).solo!.results.survey!.items[0].shares).toEqual([67, 33, 0, 0]);
+
+    s = run(s, { type: "host/reset" });
+    expect(s.players[0].score).toBe(n * 67);
+    expect(Object.keys(s.surveyResponses)).toHaveLength(3);
   });
 });

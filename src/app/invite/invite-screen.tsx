@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, PartyPopper, Sparkles, Wifi } from "lucide-react";
+import { ArrowLeft, Check, PartyPopper, Sparkles, Wifi } from "lucide-react";
 import {
   Balloons,
   PartyField,
@@ -18,10 +18,11 @@ import {
   type Sent,
 } from "@/components/party";
 import { GAME_ART } from "@/components/game-art";
-import { cx } from "@/components/ui";
-import { useNow, useStored } from "@/lib/client/hooks";
+import { cx, TILE } from "@/components/ui";
+import { useNow, usePlayerToken, useStored } from "@/lib/client/hooks";
 import { EVENT } from "@/lib/event";
 import type { MediaItem } from "@/lib/game/media";
+import { SURVEY_QUESTIONS } from "@/lib/game/survey-content";
 import discoBall from "@/assets/party/disco-ball.png";
 import logo from "@/assets/party/logo.png";
 import mezPhoto from "@/assets/party/mez-cake-photo.png";
@@ -266,6 +267,7 @@ function GuestFlow({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((
             </button>
           </section>
         )}
+        {!virtual && <BeforeParty name={savedName} />}
         {startOver}
       </div>
     );
@@ -439,6 +441,97 @@ function GuestFlow({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((
   );
 }
 
+/** Party guests answer a few questions ahead of time; their answers power "How Well Do You Know Mez?". */
+function BeforeParty({ name }: { name: string }) {
+  const token = usePlayerToken();
+  const [surveyed, setSurveyed] = useStored("local", "bf.surveyed");
+  const [open, setOpen] = useState(false);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const q = SURVEY_QUESTIONS[answers.length];
+
+  const submit = async (all: number[]) => {
+    setSending(true);
+    setError(null);
+    const res = await fetch("/api/room/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "survey/submit", token, name, answers: all }),
+    }).catch(() => null);
+    const body = res ? await res.json().catch(() => ({})) : {};
+    setSending(false);
+    if (res?.ok) setSurveyed("1");
+    else setError(res ? (body.error ?? "Couldn't save your answers.") : "Can't reach the server. Try again in a moment.");
+  };
+
+  if (surveyed === "1") {
+    return (
+      <section className="party-card party-light flex items-center gap-3 p-4 text-left">
+        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-party-mint text-white">
+          <Check aria-hidden className="size-5" />
+        </span>
+        <p className="text-sm font-semibold">Your before-the-party answers are in. We&apos;ll reveal them at the party!</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="party-card party-light flex flex-col gap-4 p-5 text-center" aria-labelledby="before-party">
+      <div>
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.25em] text-party-plum">Before the party</p>
+        <h3 id="before-party" className="mt-1 font-party text-2xl text-party-purple">
+          {open && q ? q.prompt : `${SURVEY_QUESTIONS.length} quick questions about ${EVENT.guestOfHonour}`}
+        </h3>
+        {!open && (
+          <p className="mt-1 text-sm text-party-ink/75">Your answers become part of tonight&apos;s game. No peeking at the games until then!</p>
+        )}
+      </div>
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} className="party-pill w-full bg-party-purple text-white">
+          Answer now
+        </button>
+      ) : q ? (
+        <>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-party-plum">
+            Question {answers.length + 1} of {SURVEY_QUESTIONS.length}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {q.options.map((opt, i) => (
+              <button
+                key={`${answers.length}-${i}`}
+                type="button"
+                onClick={() => {
+                  const next = [...answers, i];
+                  setAnswers(next);
+                  if (next.length === SURVEY_QUESTIONS.length) void submit(next);
+                }}
+                className={cx("min-h-16 rounded-2xl px-3 py-2 font-semibold text-party-ink shadow-[0_4px_0_rgb(0_0_0/0.15)] active:translate-y-0.5", TILE[i % 4].bg)}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="font-semibold">{sending ? "Saving your answers…" : "Your answers weren't saved."}</p>
+          {error && (
+            <>
+              <p role="alert" className="text-sm font-semibold text-party-berry">
+                {error}
+              </p>
+              <button type="button" onClick={() => void submit(answers)} className="party-pill w-full bg-party-purple text-white">
+                Try again
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ChoiceButton({
   tone,
   Icon,
@@ -530,7 +623,7 @@ function Games() {
               {art && <Image src={art.src} alt={art.alt} sizes="160px" className="h-36 w-auto object-contain" />}
               <h4 className="mt-3 font-party text-2xl">{g.name}</h4>
               <p className="mt-1 text-white/90">{g.blurb}</p>
-              <Link href="/play" aria-label={`Play ${g.name}`} className="party-pill mt-4 bg-party-yellow px-8 text-party-ink">
+              <Link href={`/games/${g.id}`} aria-label={`Play ${g.name}`} className="party-pill mt-4 bg-party-yellow px-8 text-party-ink">
                 Play
               </Link>
             </li>

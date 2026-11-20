@@ -8,7 +8,7 @@ import { cx, HostLine, Leaderboard, TILE } from "@/components/ui";
 import { useNow, usePlayerToken, useStored } from "@/lib/client/hooks";
 import { useRoom, type ConnectionStatus, type RoomConnection } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
-import { AVATARS } from "@/lib/game/mock-data";
+import { AVATARS } from "@/lib/game/avatars";
 import type { RoomView } from "@/lib/game/types";
 import cake from "@/assets/party/cake.png";
 import partyPopper from "@/assets/party/party-popper.png";
@@ -62,6 +62,7 @@ function useSavedName(): string {
 
 function JoinForm({ room, token }: { room: RoomConnection; token: string }) {
   const savedName = useSavedName();
+  const [attendance] = useStored("local", "bf.attendance");
   const [typed, setName] = useState<string | null>(null);
   const name = typed ?? savedName;
   const [avatar, setAvatar] = useState<string>(AVATARS[0]);
@@ -74,7 +75,7 @@ function JoinForm({ room, token }: { room: RoomConnection; token: string }) {
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
-        const res = await room.send({ type: "join", token, name, avatar });
+        const res = await room.send({ type: "join", token, name, avatar, remote: attendance === "virtual" });
         setBusy(false);
         setError(res.ok ? null : (res.error ?? null));
       }}
