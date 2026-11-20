@@ -1,4 +1,5 @@
 import { SCRIPT } from "@/lib/casper/script";
+import { isMediaItem, MAX_MEDIA_PER_WISH } from "./media";
 import { MOCK_QUESTIONS } from "./mock-data";
 import type {
   Action,
@@ -172,11 +173,15 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       const author = clean(action.author, LIMITS.nameLength);
       const text = clean(action.text, LIMITS.messageLength);
       if (!author) return fail("Please add your name.");
-      if (text.length < 2) return fail("Please write a message.");
+      const media = action.media ?? [];
+      if (!Array.isArray(media) || media.length > MAX_MEDIA_PER_WISH || !media.every(isMediaItem)) {
+        return fail("Those photos or videos couldn't be attached. Try uploading them again.");
+      }
+      if (media.length === 0 && text.length < 2) return fail("Please write a message.");
       if (state.messages.length >= LIMITS.maxMessages) return fail("The message wall is full.");
       const photo = action.photo ?? undefined;
       if (photo !== undefined && !isPhotoDataUrl(photo)) return fail("That profile picture couldn't be used. Try another photo.");
-      const message: GuestMessage = { id: ctx.newId(), author, text, status: "pending", createdAt: now, ...(photo && { photo }) };
+      const message: GuestMessage = { id: ctx.newId(), author, text, status: "pending", createdAt: now, ...(photo && { photo }), ...(media.length > 0 && { media: media.map(({ kind, url }) => ({ kind, url })) }) };
       return ok({ ...state, messages: [...state.messages, message] });
     }
 

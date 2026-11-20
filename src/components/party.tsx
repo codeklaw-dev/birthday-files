@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Camera, CheckCircle2, Mic, PenLine, Square, Upload, Video, X } from "lucide-react";
+import { Camera, CheckCircle2, Images, Video, X } from "lucide-react";
+import { preparePhoto, uploadFile } from "@/lib/client/upload";
+import { MAX_MEDIA_PER_WISH, type MediaItem } from "@/lib/game/media";
 import { cx } from "@/components/ui";
 import { EVENT } from "@/lib/event";
 
@@ -69,19 +71,16 @@ export function Streamers({ className }: { className?: string }) {
 
 /* ---------------------------------------------------------------- Wishes */
 
-export type Mode = "video" | "upload" | "voice" | "note";
-type Media = { kind: "video" | "image" | "audio"; url: string };
+export type Mode = "video" | "photos";
 export type Profile = { name: string; photo: string | null };
-export type WishSubmit = (author: string, text: string, photo: string | null) => Promise<{ ok: boolean; error?: string }>;
+export type WishSubmit = (text: string, media: MediaItem[]) => Promise<{ ok: boolean; error?: string }>;
 
 export const WAYS: { mode: Mode; label: string; hint: string; Icon: typeof Video; tone: string }[] = [
-  { mode: "video", label: "Record a video", hint: "Say it to the camera", Icon: Video, tone: "bg-party-pink" },
-  { mode: "upload", label: "Upload a photo or video", hint: "Your favourite memory", Icon: Upload, tone: "bg-party-sky" },
-  { mode: "voice", label: "Record a voice message", hint: "Up to a minute", Icon: Mic, tone: "bg-party-sun" },
-  { mode: "note", label: "Write a note", hint: "A wish, a memory, an inside joke", Icon: PenLine, tone: "bg-party-mint" },
+  { mode: "video", label: "Upload a video", hint: "A birthday message or a favourite clip", Icon: Video, tone: "bg-party-pink" },
+  { mode: "photos", label: "Share photo memories", hint: `Pick up to ${MAX_MEDIA_PER_WISH} photos`, Icon: Images, tone: "bg-party-sky" },
 ];
 
-export type Sent = { text: string; mediaWord: string | null };
+export type Sent = { text: string; media: MediaItem[]; previews: string[] };
 
 /** Clear confirmation after a wish is sent. */
 export function WishSent({
@@ -100,6 +99,9 @@ export function WishSent({
   const heading = useRef<HTMLHeadingElement>(null);
   // Move focus (and screen readers) to the confirmation.
   useEffect(() => heading.current?.focus(), []);
+  const videos = sent.media.filter((m) => m.kind === "video").length;
+  const photos = sent.media.length - videos;
+  const attached = [videos && `${videos} video${videos > 1 ? "s" : ""}`, photos && `${photos} photo${photos > 1 ? "s" : ""}`].filter(Boolean).join(" and ");
   return (
     <section className="party-card party-light flex animate-pop flex-col items-center gap-4 px-5 pb-6 pt-7 text-center" aria-labelledby="wish-sent-title">
       <span className="grid size-16 place-items-center rounded-full bg-party-mint text-white shadow-[0_5px_0_rgb(0_0_0/0.15)]">
@@ -109,19 +111,29 @@ export function WishSent({
         Wish sent!
       </h3>
       <figure className="w-full rounded-2xl bg-party-yellow/70 p-4 text-left">
-        <blockquote className="break-words text-lg font-medium">“{sent.text}”</blockquote>
+        {sent.previews.length > 0 && (
+          <div className="mb-3 flex gap-2 overflow-hidden">
+            {sent.previews.slice(0, 4).map((src, i) =>
+              sent.media[i]?.kind === "video" ? (
+                <video key={src} src={src} muted playsInline className="h-20 rounded-xl bg-black object-cover" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- local blob preview
+                <img key={src} src={src} alt="" className="size-20 rounded-xl object-cover" />
+              ),
+            )}
+          </div>
+        )}
+        {sent.text && <blockquote className="break-words text-lg font-medium">“{sent.text}”</blockquote>}
         <figcaption className="mt-3 flex items-center gap-2 text-sm font-semibold text-party-ink/75">
           {photo && (
             // eslint-disable-next-line @next/next/no-img-element -- local data URL
             <img src={photo} alt="" className="size-8 rounded-full object-cover" />
           )}
           From {author}
+          {attached && ` · ${attached}`}
         </figcaption>
       </figure>
-      <p className="text-party-ink/80">
-        {EVENT.guestOfHonour} will see it on the big screen once the host approves it.
-        {sent.mediaWord && ` Your ${sent.mediaWord} stays on this phone for now, since uploads open soon.`}
-      </p>
+      <p className="text-party-ink/80">{EVENT.guestOfHonour} will see it on the big screen once the host approves it.</p>
       <div className="flex w-full flex-col gap-2">
         {actions}
         <button type="button" onClick={onAnother} className="rounded-full px-4 py-2.5 font-semibold text-party-purple hover:bg-party-purple/10">
@@ -132,50 +144,93 @@ export function WishSent({
   );
 }
 
-/** One way to wish (video, upload, voice or note), plus the note that gets sent. */
+type Picked = { file: File; preview: string };
+
+/** Pick a video or photos, add a note (encouraged), then upload and send. */
 export function WishForm({
   way,
-  author,
-  setAuthor,
   onSubmit,
   onBack,
   onSent,
-  submitLabel = "Send to the files",
+  submitLabel = "Complete Wish",
 }: {
   way: (typeof WAYS)[number];
-  submitLabel?: string;
-  author: string;
-  /** Null when the name comes from a saved profile. */
-  setAuthor: ((v: string) => void) | null;
-  onSubmit: (text: string) => Promise<{ ok: boolean; error?: string }>;
+  onSubmit: WishSubmit;
   onBack: () => void;
   onSent: (s: Sent) => void;
+  submitLabel?: string;
 }) {
+  const [picked, setPicked] = useState<Picked[]>([]);
   const [text, setText] = useState("");
-  const [media, setMedia] = useState<Media | null>(null);
-  const [state, setState] = useState<{ kind: "idle" | "sending" | "error" | "info"; msg?: string }>({ kind: "idle" });
+  const [nudged, setNudged] = useState(false);
+  const [progress, setProgress] = useState<{ index: number; fraction: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const note = useRef<HTMLTextAreaElement>(null);
+  const isVideo = way.mode === "video";
   const max = 280;
-  const isNote = way.mode === "note";
-  const mediaWord = media ? (media.kind === "audio" ? "voice message" : media.kind === "image" ? "photo" : "video") : null;
+  const busy = progress !== null;
 
-  // Release object URLs when media is replaced or the form closes.
-  useEffect(() => () => {
-    if (media) URL.revokeObjectURL(media.url);
-  }, [media]);
+  // Release previews when the form closes. (Kept after sending: the confirmation shows them.)
+  const previews = useRef<string[]>([]);
+  useEffect(() => () => previews.current.forEach((u) => URL.revokeObjectURL(u)), []);
+
+  const add = (files: FileList | null) => {
+    if (!files?.length) return;
+    setError(null);
+    const list = Array.from(files).filter((f) => f.type.startsWith(isVideo ? "video/" : "image/"));
+    if (list.length < files.length) setError(isVideo ? "That file isn't a video." : "Only photos can be added here.");
+    const room = isVideo ? 1 : MAX_MEDIA_PER_WISH - picked.length;
+    if (!isVideo && list.length > room) setError(`You can add up to ${MAX_MEDIA_PER_WISH} photos.`);
+    const next = list.slice(0, Math.max(0, room)).map((file) => {
+      const preview = URL.createObjectURL(file);
+      previews.current.push(preview);
+      return { file, preview };
+    });
+    setPicked((p) => (isVideo ? next : [...p, ...next]));
+  };
+
+  const send = async () => {
+    setError(null);
+    const media: MediaItem[] = [];
+    for (let i = 0; i < picked.length; i++) {
+      setProgress({ index: i, fraction: 0 });
+      let blob: Blob = picked[i].file;
+      if (!isVideo) {
+        try {
+          blob = await preparePhoto(picked[i].file);
+        } catch {
+          if (!/^image\/(jpeg|png|webp)$/.test(blob.type)) {
+            setProgress(null);
+            return setError(`Photo ${i + 1} couldn't be read. Remove it and try another.`);
+          }
+        }
+      }
+      const res = await uploadFile(blob, (fraction) => setProgress({ index: i, fraction }));
+      if (!res.ok) {
+        setProgress(null);
+        return setError(res.error);
+      }
+      media.push(res.item);
+    }
+    const res = await onSubmit(text.trim(), media);
+    setProgress(null);
+    if (!res.ok) return setError(res.error ?? "Something went wrong. Try again.");
+    onSent({ text: text.trim(), media, previews: picked.map((p) => p.preview) });
+  };
 
   return (
     <form
       className="party-card party-light flex flex-col gap-4 p-5"
-      onSubmit={async (e) => {
+      onSubmit={(e) => {
         e.preventDefault();
-        if (!text.trim()) {
-          setState({ kind: "info", msg: `Uploads aren't switched on yet, so add a few words and ${EVENT.guestOfHonour} still gets your wish.` });
+        if (busy) return;
+        if (picked.length === 0) return setError(isVideo ? "Choose a video first." : "Choose at least one photo first.");
+        if (!text.trim() && !nudged) {
+          setNudged(true);
           return;
         }
-        setState({ kind: "sending" });
-        const res = await onSubmit(text);
-        if (!res.ok) return setState({ kind: "error", msg: res.error ?? "Something went wrong. Try again." });
-        onSent({ text: text.trim(), mediaWord });
+        void send();
       }}
     >
       <div className="flex items-center gap-3">
@@ -183,23 +238,59 @@ export function WishForm({
           <way.Icon aria-hidden className="size-5" strokeWidth={2.4} />
         </span>
         <h3 className="min-w-0 flex-1 font-party text-xl">{way.label}</h3>
-        <button type="button" onClick={onBack} aria-label="Pick another way to wish" className="grid size-10 place-items-center rounded-full hover:bg-party-purple/10">
+        <button type="button" onClick={onBack} disabled={busy} aria-label="Pick another way to wish" className="grid size-10 place-items-center rounded-full hover:bg-party-purple/10">
           <X aria-hidden className="size-5" />
         </button>
       </div>
 
-      {way.mode === "video" && <FilePick accept="video/*" capture="user" label="Open the camera" media={media} onMedia={setMedia} />}
-      {way.mode === "upload" && <FilePick accept="image/*,video/*" label="Choose a photo or video" media={media} onMedia={setMedia} />}
-      {way.mode === "voice" && <VoiceRecorder media={media} onMedia={setMedia} />}
-
-      {setAuthor && (
-        <PartyField label="Your name">
-          <input required maxLength={20} value={author} onChange={(e) => setAuthor(e.target.value)} autoComplete="given-name" className="party-input" />
-        </PartyField>
+      <input
+        ref={input}
+        type="file"
+        accept={isVideo ? "video/*" : "image/*"}
+        multiple={!isVideo}
+        className="sr-only"
+        tabIndex={-1}
+        onChange={(e) => {
+          add(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      {picked.length > 0 &&
+        (isVideo ? (
+          <video src={picked[0].preview} controls playsInline className="max-h-72 w-full rounded-2xl bg-black" />
+        ) : (
+          <ul className="grid grid-cols-3 gap-2" aria-label="Chosen photos">
+            {picked.map((p, i) => (
+              <li key={p.preview} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
+                <img src={p.preview} alt={`Photo ${i + 1}`} className="aspect-square w-full rounded-xl object-cover" />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setPicked((all) => all.filter((x) => x !== p))}
+                  aria-label={`Remove photo ${i + 1}`}
+                  className="absolute right-1 top-1 grid size-7 place-items-center rounded-full bg-party-ink/70 text-white"
+                >
+                  <X aria-hidden className="size-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ))}
+      {(isVideo || picked.length < MAX_MEDIA_PER_WISH) && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => input.current?.click()}
+          className="rounded-2xl border-2 border-dashed border-party-purple/40 px-4 py-5 font-semibold text-party-purple transition hover:bg-party-purple/5"
+        >
+          {isVideo ? (picked.length ? "Choose a different video" : "Choose a video") : picked.length ? "Add more photos" : "Choose photos"}
+        </button>
       )}
-      <PartyField label={isNote ? `Message for ${EVENT.guestOfHonour}` : "Add a note"} hint={`${text.length}/${max}`}>
+
+      <PartyField label={`Add a note for ${EVENT.guestOfHonour}`} hint={`${text.length}/${max}`}>
         <textarea
-          required={isNote}
+          ref={note}
           rows={3}
           maxLength={max}
           value={text}
@@ -208,14 +299,44 @@ export function WishForm({
           className="party-input resize-none"
         />
       </PartyField>
+      {!nudged && <p className="-mt-2 text-sm text-party-ink/70">Optional, but a few words make it extra special.</p>}
 
-      <button type="submit" disabled={state.kind === "sending"} className="party-pill bg-party-purple text-white">
-        {state.kind === "sending" ? "Sending…" : submitLabel}
+      {nudged && !text.trim() && !busy && (
+        <div role="status" className="rounded-2xl bg-party-lilac/50 p-4 text-center">
+          <p className="font-semibold">Add a few words? {EVENT.guestOfHonour} would love a note with it.</p>
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            <button type="button" onClick={() => note.current?.focus()} className="party-pill min-h-10 bg-party-purple px-4 py-1.5 text-base text-white">
+              Add a note
+            </button>
+            <button type="button" onClick={() => void send()} className="rounded-full px-4 py-1.5 font-semibold text-party-plum underline underline-offset-4">
+              Send without one
+            </button>
+          </div>
+        </div>
+      )}
+
+      {progress && (
+        <div aria-live="polite">
+          <p className="mb-1 text-sm font-semibold">
+            {isVideo ? "Uploading your video" : `Uploading photo ${progress.index + 1} of ${picked.length}`}… {Math.round(progress.fraction * 100)}%
+          </p>
+          <div className="h-3 overflow-hidden rounded-full bg-party-purple/15">
+            <div
+              className="h-full rounded-full bg-party-purple transition-[width]"
+              style={{ width: `${Math.round(((progress.index + progress.fraction) / Math.max(1, picked.length)) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <button type="submit" disabled={busy} className="party-pill bg-party-purple text-white">
+        {busy ? "Sending…" : submitLabel}
       </button>
-      <p aria-live="polite" className="min-h-5 text-sm">
-        {state.kind === "info" && <span className="text-party-plum">{state.msg}</span>}
-        {state.kind === "error" && <span className="font-semibold text-party-berry">{state.msg}</span>}
-      </p>
+      {error && (
+        <p role="alert" className="text-sm font-semibold text-party-berry">
+          {error}
+        </p>
+      )}
     </form>
   );
 }
@@ -313,138 +434,5 @@ export function PartyField({ label, hint, children }: { label: string; hint?: st
       </span>
       {children}
     </label>
-  );
-}
-
-function MediaPreview({ media }: { media: Media }) {
-  if (media.kind === "image") {
-    // eslint-disable-next-line @next/next/no-img-element -- local blob preview, nothing to optimise
-    return <img src={media.url} alt="Your photo" className="max-h-72 w-full rounded-2xl object-contain bg-party-ink/5" />;
-  }
-  if (media.kind === "audio") return <audio src={media.url} controls className="w-full" />;
-  return <video src={media.url} controls playsInline className="max-h-72 w-full rounded-2xl bg-black" />;
-}
-
-/** On phones, `capture` opens the camera directly; elsewhere it falls back to a file picker. */
-function FilePick({
-  accept,
-  capture,
-  label,
-  media,
-  onMedia,
-}: {
-  accept: string;
-  capture?: "user";
-  label: string;
-  media: Media | null;
-  onMedia: (m: Media | null) => void;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  return (
-    <div className="flex flex-col gap-3">
-      {media && <MediaPreview media={media} />}
-      <input
-        ref={input}
-        type="file"
-        accept={accept}
-        capture={capture}
-        className="sr-only"
-        tabIndex={-1}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          if (!file) return;
-          onMedia({ kind: file.type.startsWith("image/") ? "image" : "video", url: URL.createObjectURL(file) });
-        }}
-      />
-      <button
-        type="button"
-        onClick={() => input.current?.click()}
-        className="rounded-2xl border-2 border-dashed border-party-purple/40 px-4 py-5 font-semibold text-party-purple transition hover:bg-party-purple/5"
-      >
-        {media ? "Choose a different one" : label}
-      </button>
-    </div>
-  );
-}
-
-const MAX_VOICE_SECONDS = 60;
-
-function VoiceRecorder({ media, onMedia }: { media: Media | null; onMedia: (m: Media | null) => void }) {
-  const [status, setStatus] = useState<"idle" | "recording" | "error">("idle");
-  const [seconds, setSeconds] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const recorder = useRef<MediaRecorder | null>(null);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const stop = () => {
-    if (timer.current) clearInterval(timer.current);
-    timer.current = null;
-    if (recorder.current?.state === "recording") recorder.current.stop();
-  };
-
-  // Stop the mic if the form closes mid-recording.
-  useEffect(() => () => {
-    if (timer.current) clearInterval(timer.current);
-    if (recorder.current?.state === "recording") recorder.current.stop();
-  }, []);
-
-  const start = async () => {
-    setError(null);
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      setStatus("error");
-      setError("This browser can't record audio. Try writing a note instead.");
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-      rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-      rec.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        setStatus("idle");
-        if (chunks.length) onMedia({ kind: "audio", url: URL.createObjectURL(new Blob(chunks, { type: rec.mimeType })) });
-      };
-      recorder.current = rec;
-      rec.start();
-      setSeconds(0);
-      setStatus("recording");
-      timer.current = setInterval(() => {
-        setSeconds((s) => {
-          if (s + 1 >= MAX_VOICE_SECONDS) stop();
-          return s + 1;
-        });
-      }, 1000);
-    } catch {
-      setStatus("error");
-      setError("Microphone access was blocked. Allow it in your browser settings, or write a note instead.");
-    }
-  };
-
-  const recording = status === "recording";
-  return (
-    <div className="flex flex-col items-center gap-3">
-      {media && !recording && <MediaPreview media={media} />}
-      <button
-        type="button"
-        onClick={recording ? stop : start}
-        aria-label={recording ? "Stop recording" : media ? "Record again" : "Start recording"}
-        className={cx(
-          "grid size-20 place-items-center rounded-full text-white shadow-[0_5px_0_0_rgb(0_0_0/0.2)] transition active:translate-y-1",
-          recording ? "animate-pulse bg-party-berry" : "bg-party-purple",
-        )}
-      >
-        {recording ? <Square aria-hidden className="size-7" fill="currentColor" /> : <Mic aria-hidden className="size-8" />}
-      </button>
-      <p aria-live="polite" className="text-sm font-semibold text-party-ink/75">
-        {recording
-          ? `Recording… 0:${String(seconds).padStart(2, "0")} / 1:00`
-          : media
-            ? "Tap to record again"
-            : "Tap to start recording"}
-      </p>
-      {error && <p className="text-center text-sm font-semibold text-party-berry">{error}</p>}
-    </div>
   );
 }

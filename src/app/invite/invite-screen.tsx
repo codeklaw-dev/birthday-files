@@ -20,6 +20,7 @@ import { GAME_ART } from "@/components/game-art";
 import { cx } from "@/components/ui";
 import { useNow, useStored } from "@/lib/client/hooks";
 import { EVENT } from "@/lib/event";
+import type { MediaItem } from "@/lib/game/media";
 import discoBall from "@/assets/party/disco-ball.png";
 import logo from "@/assets/party/logo.png";
 import mezPhoto from "@/assets/party/mez-cake-photo.png";
@@ -50,12 +51,12 @@ function useGuest() {
 
 const scrollToGames = () => document.getElementById("games")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-async function submitMessage(author: string, text: string, photo: string | null) {
+async function submitMessage(author: string, text: string, photo: string | null, media: MediaItem[] = []) {
   try {
     const res = await fetch("/api/room/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "submitMessage", author, text, photo }),
+      body: JSON.stringify({ type: "submitMessage", author, text, photo, media }),
     });
     const body = await res.json().catch(() => ({}));
     return res.ok ? { ok: true } : { ok: false, error: body.error ?? "Something went wrong." };
@@ -108,6 +109,10 @@ function Hero() {
 
       <div className="relative mx-auto flex max-w-sm flex-col items-center rounded-t-[2.25rem] bg-party-yellow px-5 pb-40 pt-14">
         <Countdown />
+        <div id="guest-flow" className="mt-8 w-full scroll-mt-16">
+          <GuestFlow open={flowOpen} setOpen={setFlowOpen} />
+        </div>
+        {!flowOpen && (
         <div className="mt-8 flex w-full flex-col items-center rounded-[1.75rem] bg-party-purple px-6 pb-6 pt-5 text-center text-white shadow-[0_8px_0_rgb(94_31_107/0.35)]">
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.3em] text-party-yellow">Calling all detectives</p>
           <p className="mt-2 font-party text-2xl leading-tight">
@@ -122,9 +127,7 @@ function Hero() {
             Count me in!
           </button>
         </div>
-        <div id="guest-flow" className="mt-8 w-full scroll-mt-16">
-          <GuestFlow open={flowOpen} setOpen={setFlowOpen} />
-        </div>
+        )}
 
         <Balloons className="absolute -left-4 bottom-0 w-28" />
         <Image src={partyPopper} alt="" className="absolute -right-2 bottom-2 w-32" sizes="128px" />
@@ -278,17 +281,15 @@ function GuestFlow({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((
   );
 
   if (step === "wish") {
-    const way = WAYS.find((w) => w.mode === mode) ?? WAYS[3];
+    const way = WAYS.find((w) => w.mode === mode) ?? WAYS[0];
     return (
       <div className="animate-rise">
         {header}
         <WishForm
           key={way.mode}
           way={way}
-          author={savedName}
-          setAuthor={null}
           submitLabel="Complete Wish"
-          onSubmit={(text) => submitMessage(savedName, text, photo)}
+          onSubmit={(text, media) => submitMessage(savedName, text, photo, media)}
           onBack={back}
           onSent={(s) => {
             setSent(s);

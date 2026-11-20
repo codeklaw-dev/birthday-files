@@ -138,6 +138,19 @@ describe("host tools", () => {
     expect(run(createRoom(), { type: "submitMessage", author: "Nana", text: "Hi there", photo: null }).messages[0]).not.toHaveProperty("photo");
   });
 
+  it("attaches uploaded photos or a video, and lets the note be optional then", () => {
+    const img = { kind: "image" as const, url: "/api/uploads/0f8fad5b-d9cb-469f-a165-70867728950e.jpg" };
+    const vid = { kind: "video" as const, url: "/api/uploads/7c9e6679-7425-40de-944b-e07fc1f90ae7.mov" };
+    const s = run(createRoom(), { type: "submitMessage", author: "Nana", text: "", media: [img, vid] });
+    expect(s.messages[0].media).toEqual([img, vid]);
+    const bad = (media: unknown[]) => err(createRoom(), { type: "submitMessage", author: "Nana", text: "Hi there", media: media as never });
+    expect(bad([{ kind: "image", url: "https://evil.example/x.jpg" }])).toMatch(/attached/);
+    expect(bad([{ kind: "image", url: "/api/uploads/../../etc/passwd" }])).toMatch(/attached/);
+    expect(bad([{ kind: "image", url: vid.url }])).toMatch(/attached/);
+    expect(bad(Array(11).fill(img))).toMatch(/attached/);
+    expect(err(createRoom(), { type: "submitMessage", author: "Nana", text: "", media: [] })).toMatch(/message/);
+  });
+
   it("kicks a player and frees their token", () => {
     let s = twoPlayers();
     s = run(s, { type: "host/kick", playerId: idOf(s, "token-alice") });

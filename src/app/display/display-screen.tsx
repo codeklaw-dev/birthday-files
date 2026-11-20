@@ -1,6 +1,7 @@
 "use client";
 
 import QRCode from "qrcode";
+import { mediaSrc } from "@/lib/client/upload";
 import { useEffect, useState } from "react";
 import { cx, HostLine, Leaderboard, Logo, StatusDot, TILE } from "@/components/ui";
 import { getCasper } from "@/lib/casper";
@@ -224,7 +225,19 @@ function MessageWall({ view }: { view: RoomView }) {
         <ul className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-5 overflow-hidden md:grid-cols-2 xl:grid-cols-3">
           {notes.map((m, i) => (
             <li key={m.id} className="file-card animate-rise p-6" style={{ rotate: `${((i % 3) - 1) * 1.2}deg` }}>
-              <p className="text-2xl font-medium leading-snug">“{m.text}”</p>
+              {m.media && m.media.length > 0 && (
+                <div className={cx("mb-4 grid gap-2", m.media.length > 1 && "grid-cols-2")}>
+                  {m.media.slice(0, 4).map((x) =>
+                    x.kind === "video" ? (
+                      <video key={x.url} src={mediaSrc(x.url)} autoPlay muted loop playsInline className="max-h-56 w-full rounded-lg bg-black object-cover" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element -- guest upload served by our API
+                      <img key={x.url} src={mediaSrc(x.url)} alt="" className="max-h-56 w-full rounded-lg object-cover" />
+                    ),
+                  )}
+                </div>
+              )}
+              {m.text && <p className="text-2xl font-medium leading-snug">“{m.text}”</p>}
               <div className="mt-4 flex items-center gap-3">
                 {m.photo && (
                   // eslint-disable-next-line @next/next/no-img-element -- inline data URL from the guest's phone

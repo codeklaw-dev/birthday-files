@@ -4,6 +4,7 @@ import { Check, EyeOff, ExternalLink, Minus, Plus, RotateCcw, UserX } from "luci
 import { useState } from "react";
 import { Button, cx, Field, HostLine, Logo, StatusDot } from "@/components/ui";
 import { useNow, useStored } from "@/lib/client/hooks";
+import { mediaSrc } from "@/lib/client/upload";
 import { useRoom, type RoomConnection } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
 import type { HostAction, Phase, RoomView } from "@/lib/game/types";
@@ -296,7 +297,21 @@ function Messages({ view, act }: { view: RoomView; act: Act }) {
                 <img src={m.photo} alt={`${m.author}'s profile picture`} className="size-10 shrink-0 rounded-full object-cover" />
               )}
               <div className="min-w-0 flex-1">
-                <p className="break-words text-sm">{m.text}</p>
+                {m.media && m.media.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {m.media.map((x, i) =>
+                      x.kind === "video" ? (
+                        <video key={x.url} src={mediaSrc(x.url)} controls preload="metadata" playsInline className="h-28 max-w-full rounded-lg bg-black" />
+                      ) : (
+                        <a key={x.url} href={mediaSrc(x.url)} target="_blank" rel="noreferrer" aria-label={`Open photo ${i + 1} from ${m.author}`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- guest upload served by our API */}
+                          <img src={mediaSrc(x.url)} alt="" className="size-16 rounded-lg object-cover" />
+                        </a>
+                      ),
+                    )}
+                  </div>
+                )}
+                {m.text ? <p className="break-words text-sm">{m.text}</p> : <p className="text-sm italic text-haze">No note</p>}
                 <p className="mt-1 font-mono text-xs text-haze">
                   — {m.author} ·{" "}
                   <span className={cx(m.status === "approved" && "text-go", m.status === "hidden" && "text-stamp", m.status === "pending" && "text-gold")}>
