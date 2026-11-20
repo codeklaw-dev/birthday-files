@@ -437,8 +437,14 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
     myAnswer: me ? (state.answers[me.id]?.optionIndex ?? null) : null,
     myGain: me && state.phase === "reveal" ? (state.lastGains[me.id] ?? 0) : null,
     lastGains: state.phase === "reveal" || role === "host" ? state.lastGains : {},
-    // Wishes stay off guests' phones: the host sees all, the TV only approved ones.
-    messages: role === "host" ? state.messages : role === "display" ? state.messages.filter((m) => m.status === "approved") : [],
+    // Wishes stay off guests' phones. The host sees all; the TV (which needs no key) gets the
+    // approved ones only while the wish wall is on screen, so opening it early reveals nothing.
+    messages:
+      role === "host"
+        ? state.messages
+        : role === "display" && state.phase === "messages"
+          ? state.messages.filter((m) => m.status === "approved")
+          : [],
     solo: role === "player" && me?.remote ? soloView(state, me.id) : null,
     survey: role === "host" ? { responses: Object.keys(state.surveyResponses).length, tallies: surveyTallies(state) } : null,
     cake: { candles: state.cake.candles, lit: candlesLit(state.cake) },

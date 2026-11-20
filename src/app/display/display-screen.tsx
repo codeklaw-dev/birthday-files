@@ -4,7 +4,6 @@ import Image from "next/image";
 import QRCode from "qrcode";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Check, Crown, Volume2, VolumeX } from "lucide-react";
-import { KeyGate } from "@/components/key-gate";
 import { Balloons, Streamers } from "@/components/party";
 import { cx, TILE } from "@/components/ui";
 import { mediaSrc } from "@/lib/client/upload";
@@ -16,7 +15,7 @@ import logo from "@/assets/party/logo.png";
 import mezPhoto from "@/assets/party/mez-cake-photo.png";
 import partyPopper from "@/assets/party/party-popper.png";
 import { getBrowserVoice, getCasper } from "@/lib/casper";
-import { useNow, useStored } from "@/lib/client/hooks";
+import { useNow } from "@/lib/client/hooks";
 import { useRoom } from "@/lib/client/use-room";
 import { EVENT } from "@/lib/event";
 import type { RoomView } from "@/lib/game/types";
@@ -32,41 +31,13 @@ function joinUrlFor(view: RoomView | null): string | null {
   return `${origin}/play`;
 }
 
-/** The TV is locked: wishes appear on it, so only someone with the TV (or host) key can open it. */
+/** The TV screen. It needs no key: it only receives wishes while the host is showing the wish wall. */
 export function DisplayScreen() {
-  const [displayKey, setDisplayKey] = useStored("local", "bf.displayKey");
-
-  // If the key changes on the server, a remembered key stops working: ask again.
-  useEffect(() => {
-    if (!displayKey) return;
-    let cancelled = false;
-    fetch("/api/room/display-check", { method: "POST", headers: { "x-host-key": displayKey } })
-      .then((res) => {
-        if (!cancelled && res.status === 401) setDisplayKey(null);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [displayKey, setDisplayKey]);
-
-  if (displayKey === undefined) return <main className="stage flex-1" />;
-  if (displayKey === null) {
-    return (
-      <KeyGate
-        title="TV screen"
-        description="Enter the TV key (or the host key). This TV remembers it, so you only do this once."
-        label="TV key"
-        checkUrl="/api/room/display-check"
-        onUnlock={setDisplayKey}
-      />
-    );
-  }
-  return <Stage displayKey={displayKey} />;
+  return <Stage />;
 }
 
-function Stage({ displayKey }: { displayKey: string }) {
-  const { view, status, clockOffset } = useRoom("display", { hostKey: displayKey });
+function Stage() {
+  const { view, status, clockOffset } = useRoom("display");
   const joinUrl = joinUrlFor(view);
 
   // Casper speaks each new line out loud (once the voice is turned on); the TV shows no captions.

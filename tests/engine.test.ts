@@ -126,6 +126,9 @@ describe("host tools", () => {
     expect(viewFor(s, "display", null, 0).messages).toHaveLength(0);
     expect(viewFor(s, "host", null, 0).messages).toHaveLength(1);
     s = run(s, { type: "host/moderate", messageId: s.messages[0].id, status: "approved" });
+    // Approved, but the wall isn't on screen yet: the TV still gets nothing.
+    expect(viewFor(s, "display", null, 0).messages).toHaveLength(0);
+    s = run(s, { type: "host/showMessages" });
     expect(viewFor(s, "display", null, 0).messages).toHaveLength(1);
     expect(viewFor(s, "player", "token-mezzz", 0).messages).toHaveLength(0);
     expect(err(s, { type: "submitMessage", author: "Nana", text: " " })).toMatch(/message/);
