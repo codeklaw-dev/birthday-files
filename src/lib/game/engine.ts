@@ -258,6 +258,10 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
         hostLine: SCRIPT.leaderboard(rankPlayers(state.players)[0]?.name ?? null),
       });
 
+    case "launch":
+      if (state.phase !== "lobby") return fail("The party has already been launched.");
+      return ok({ ...state, phase: "premiere", slide: 0, hostLine: SCRIPT.intro });
+
     case "host/premiere":
       if (state.phase === "question") return fail("Reveal the current question first.");
       return ok({ ...state, phase: "premiere", slide: 0, hostLine: SCRIPT.intro });

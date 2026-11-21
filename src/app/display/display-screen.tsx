@@ -40,7 +40,7 @@ export function DisplayScreen() {
 }
 
 function Stage() {
-  const { view, status, clockOffset } = useRoom("display");
+  const { view, status, clockOffset, send } = useRoom("display");
   const joinUrl = joinUrlFor(view);
 
   // Casper speaks each new line out loud (once the voice is turned on); the TV shows no captions.
@@ -81,7 +81,7 @@ function Stage() {
         ) : view.phase === "premiere" ? (
           <Premiere view={view} joinUrl={joinUrl} />
         ) : view.phase === "lobby" ? (
-          <Lobby view={view} joinUrl={joinUrl} />
+          <Lobby view={view} joinUrl={joinUrl} onLaunch={() => send({ type: "launch" })} />
         ) : view.phase === "question" || view.phase === "reveal" ? (
           <QuestionBoard key={`${view.questionIndex}-${view.phase}`} view={view} clockOffset={clockOffset} />
         ) : view.phase === "leaderboard" ? (
@@ -107,8 +107,9 @@ const noSubscribe = () => () => {};
 function VoiceToggle({ line, lang }: { line: Bilingual; lang: Lang | "both" }) {
   // Only the browser knows whether it can speak; the server render shows nothing.
   const voice = useSyncExternalStore(noSubscribe, getTvVoice, () => null);
-  const [on, setOn] = useState(false);
+  const [onLocal, setOn] = useState(false);
   if (!voice) return null;
+  const on = onLocal || voice.isEnabled;
   return (
     <button
       type="button"
@@ -241,8 +242,16 @@ function Qr({ url }: { url: string }) {
 
 const CHIP_TONES = ["bg-party-pink text-white", "bg-party-sky text-party-ink", "bg-party-sun text-party-ink", "bg-party-mint text-party-ink", "bg-white text-party-ink", "bg-party-lilac text-party-ink"];
 
-function Lobby({ view, joinUrl }: { view: RoomView; joinUrl: string | null }) {
+function Lobby({ view, joinUrl, onLaunch }: { view: RoomView; joinUrl: string | null; onLaunch: () => Promise<{ ok: boolean }> }) {
   const players = [...view.players].sort((a, b) => a.joinedAt - b.joinedAt);
+  const [launching, setLaunching] = useState(false);
+  const launch = async () => {
+    // The click also unlocks sound, so Casper can introduce himself straight away.
+    getTvVoice()?.enable();
+    setLaunching(true);
+    const res = await onLaunch();
+    if (!res.ok) setLaunching(false);
+  };
   return (
     <div className="relative grid min-h-0 flex-1 grid-cols-[1.25fr_1fr] items-center gap-[4vw]">
       <Streamers className="absolute inset-0 h-full w-full opacity-70" />
@@ -259,6 +268,14 @@ function Lobby({ view, joinUrl }: { view: RoomView; joinUrl: string | null }) {
         <p className="mt-[2vh] max-w-[46vw] text-[2.9vh] font-semibold">
           A live game show all about {EVENT.guestOfHonour}. Grab your phone, scan the code and get ready to play!
         </p>
+        <button
+          type="button"
+          onClick={() => void launch()}
+          disabled={launching}
+          className="mt-[3vh] inline-flex w-fit -rotate-1 items-center gap-[1vw] rounded-full bg-party-yellow px-[3vw] py-[2vh] font-party text-[5.5vh] leading-none text-party-ink shadow-[0_1vh_0_rgb(94_31_107/0.6)] transition hover:scale-105 active:translate-y-[0.6vh] active:shadow-[0_0.3vh_0_rgb(94_31_107/0.6)] disabled:opacity-60"
+        >
+          🚀 {launching ? "Launching…" : "Launch party"}
+        </button>
         <div className="mt-[3.5vh] font-mono text-[1.7vh] font-bold uppercase tracking-[0.3em] text-party-yellow">
           Detectives in the room · {players.length}
         </div>

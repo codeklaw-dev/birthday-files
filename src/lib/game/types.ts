@@ -175,6 +175,8 @@ export interface RoomView {
 
 export type PlayerAction =
   | { type: "join"; token: string; name: string; avatar: string; remote?: boolean }
+  /** The TV's "Launch party" button: lobby → premiere only, so it needs no key. */
+  | { type: "launch" }
   | { type: "survey/submit"; token: string; name: string; answers: number[] }
   | { type: "solo/submit"; token: string; game: SoloGameId; answers: number[] }
   | { type: "answer"; token: string; optionIndex: number }
