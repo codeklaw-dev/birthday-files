@@ -1,5 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 /**
  * Casper's natural voice via ElevenLabs text-to-speech.
@@ -13,15 +15,27 @@ const MODEL = process.env.ELEVENLABS_MODEL || "eleven_v3"; // expressive; suppor
 
 export const voiceConfigured = () => Boolean(process.env.ELEVENLABS_API_KEY);
 
+/** Lines recorded ahead of time (scripts/record-voice.mjs) live in voice-cache/, so the voice works without a key. */
+const RECORDED_DIR = path.join(process.cwd(), "voice-cache");
+export const voiceKey = (text: string) => createHash("sha256").update(`${VOICE_ID}|${MODEL}|${text}`).digest("hex");
+
+export async function recorded(text: string): Promise<Buffer | null> {
+  try {
+    return await readFile(path.join(RECORDED_DIR, `${voiceKey(text)}.mp3`));
+  } catch {
+    return null;
+  }
+}
+
 /** Finished audio, keyed by voice + model + text, so each line costs credits only once. */
 const cache = new Map<string, Promise<Buffer>>();
 const MAX_CACHED = 300;
 
 export function speak(text: string): Promise<Buffer> {
-  const key = createHash("sha256").update(`${VOICE_ID}|${MODEL}|${text}`).digest("hex");
+  const key = voiceKey(text);
   const hit = cache.get(key);
   if (hit) return hit;
-  const job = synthesise(text).catch((err) => {
+  const job = recorded(text).then((clip) => clip ?? synthesise(text)).catch((err) => {
     cache.delete(key); // don't keep failures
     throw err;
   });

@@ -75,7 +75,7 @@ function Stage() {
         </div>
       </header>
 
-      {view && view.phase !== "lobby" && view.phase !== "finished" && <TvControls view={view} send={send} />}
+      {view && view.phase !== "lobby" && (view.phase !== "finished" || view.questionIndex + 1 < view.totalQuestions) && <TvControls view={view} send={send} />}
       <section className="relative z-10 flex min-h-0 flex-1 flex-col px-[3vw] pb-[3.5vh] pt-[2vh]">
         {!view ? (
           <p className="m-auto animate-wiggle font-party text-[5vh]">Warming up the stage…</p>
@@ -115,6 +115,8 @@ function TvControls({ view, send }: { view: RoomView; send: (a: { type: "advance
           ? "Scores"
           : view.phase === "cake"
             ? "Finale 🏆"
+            : view.phase === "finished"
+              ? "More questions"
             : moreQuestions
               ? "Next question"
               : "Cake time 🎂";
@@ -373,7 +375,7 @@ function QuestionBoard({ view, clockOffset }: { view: RoomView; clockOffset: num
       <div className="flex items-start justify-between gap-[2vw]">
         <div className="relative flex-1 -rotate-1 rounded-[3vh] bg-white px-[2.2vw] py-[2.2vh] text-party-ink shadow-[0_1vh_0_rgb(94_31_107/0.45)]">
           <span className="absolute -top-[2vh] left-[2vw] rotate-[-4deg] rounded-full bg-party-pink px-[1.2vw] py-[0.6vh] font-mono text-[1.8vh] font-bold uppercase tracking-[0.25em] text-white">
-            Question {view.questionIndex + 1} of {view.totalQuestions}
+            {q.round ? `${q.round} · ` : ""}Question {view.questionIndex + 1} of {view.totalQuestions}
           </span>
           <h1 className="font-party text-[6vh] leading-[1.1] [text-wrap:balance]">{q.prompt}</h1>
         </div>

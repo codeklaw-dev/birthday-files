@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { roomStore } from "@/lib/server/room-store";
-import { speak, voiceConfigured } from "@/lib/server/voice";
+import { recorded, speak, voiceConfigured } from "@/lib/server/voice";
 
 /**
  * Audio for Casper's current line. Only the line the room is on right now can
@@ -8,11 +8,12 @@ import { speak, voiceConfigured } from "@/lib/server/voice";
  * arbitrary text.
  */
 export async function GET(req: NextRequest) {
-  if (!voiceConfigured()) return Response.json({ error: "Voice not configured." }, { status: 503 });
   const lang = req.nextUrl.searchParams.get("lang");
   const text = req.nextUrl.searchParams.get("text") ?? "";
   if (lang !== "en" && lang !== "bn") return Response.json({ error: "Unknown language." }, { status: 400 });
   if (text !== roomStore.getState().hostLine[lang]) return Response.json({ error: "Not the current line." }, { status: 409 });
+  // No key: only lines recorded ahead of time can be played; anything else falls back to the browser voice.
+  if (!voiceConfigured() && !(await recorded(text))) return Response.json({ error: "Voice not configured." }, { status: 503 });
   try {
     const audio = await speak(text);
     return new Response(new Uint8Array(audio), {

@@ -21,9 +21,10 @@ export const SCRIPT = {
     en: `Question ${n} of ${total}. Fingers on phones — how well do you know Mez?`,
     bn: `প্রশ্ন ${n}, মোট ${total}টি। ফোন হাতে নিন — মেজকে কতটা চেনেন?`,
   }),
-  reveal: (correct: number, answered: number): Bilingual => ({
-    en: `Time's up! ${correct} of ${answered} detectives cracked it.`,
-    bn: `সময় শেষ! ${answered} জনের মধ্যে ${correct} জন গোয়েন্দা সঠিক উত্তর দিয়েছেন।`,
+  // Fixed wording (no numbers) so the voice clip can be recorded ahead of time.
+  reveal: (): Bilingual => ({
+    en: "Time's up! Let's see who cracked the case.",
+    bn: "সময় শেষ! দেখি কে কে রহস্যের সমাধান করেছেন।",
   }),
   leaderboard: (leader: string | null): Bilingual => ({
     en: leader ? `Here are the standings — ${leader} leads the investigation!` : "Here are the standings!",

@@ -272,3 +272,18 @@ describe("one profile per person", () => {
   });
 });
 
+
+describe("Mez Majority (crowd) questions", () => {
+  it("marks the most-picked option as correct at reveal", () => {
+    let s = twoPlayers();
+    const crowdAt = s.questions.findIndex((q) => q.crowd);
+    expect(crowdAt).toBeGreaterThan(-1);
+    s = run(s, { type: "host/start" }, 0);
+    s = { ...s, questionIndex: crowdAt, questionEndsAt: 100000 };
+    s = run(s, { type: "answer", token: "token-alice", optionIndex: 2 }, 10);
+    s = run(s, { type: "answer", token: "token-bobby", optionIndex: 2 }, 20);
+    expect(s.phase).toBe("reveal");
+    expect(s.questions[crowdAt].correctIndex).toBe(2);
+    expect(s.players.every((p) => p.score > 0)).toBe(true);
+  });
+});

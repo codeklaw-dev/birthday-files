@@ -102,16 +102,22 @@ function startQuestion(state: RoomState, index: number, now: number): ActionResu
 }
 
 /** Score the current question. Correct = base + a bonus for speed. */
-function reveal(state: RoomState, now: number): ActionResult {
-  const q = state.questions[state.questionIndex];
+function reveal(input: RoomState, now: number): ActionResult {
+  let state = input;
+  let q = state.questions[state.questionIndex];
   if (state.phase !== "question" || !q) return fail("No question is open.");
+  if (q.crowd) {
+    // The room decides: the most-picked option wins (ties go to the first).
+    const counts = q.options.map((_, i) => Object.values(state.answers).filter((a) => a.optionIndex === i).length);
+    q = { ...q, correctIndex: counts.indexOf(Math.max(...counts)) };
+    const fixed = q;
+    state = { ...state, questions: state.questions.map((x, i) => (i === state.questionIndex ? fixed : x)) };
+  }
   const started = state.questionStartedAt ?? now;
   const window = q.seconds * 1000;
   const gains: Record<string, number> = {};
-  let correct = 0;
   for (const [playerId, a] of Object.entries(state.answers)) {
     if (a.optionIndex !== q.correctIndex) continue;
-    correct++;
     const left = Math.min(1, Math.max(0, 1 - (a.at - started) / window));
     gains[playerId] = LIMITS.basePoints + Math.round(LIMITS.speedBonus * left);
   }
@@ -125,7 +131,7 @@ function reveal(state: RoomState, now: number): ActionResult {
       ...state.scoreLog,
       ...Object.entries(gains).map(([playerId, delta]) => ({ playerId, delta, reason: `quiz:${q.id}`, at: now })),
     ],
-    hostLine: SCRIPT.reveal(correct, Object.keys(state.answers).length),
+    hostLine: SCRIPT.reveal(),
   });
 }
 
@@ -290,7 +296,8 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
         case "cake":
           return step({ type: "host/finish" });
         default:
-          return fail("The show is over.");
+          // Finished, but more questions were added: carry on with the next one.
+          return state.questionIndex + 1 < state.questions.length ? step({ type: "host/next" }) : fail("The show is over.");
       }
     }
 
@@ -519,6 +526,7 @@ export function viewFor(state: RoomState, role: Role, token: string | null, now:
           prompt: q.prompt,
           options: q.options,
           seconds: q.seconds,
+          round: q.round ?? null,
           endsAt: state.questionEndsAt,
           correctIndex: showKey ? q.correctIndex : null,
           tally: showKey ? tally : null,

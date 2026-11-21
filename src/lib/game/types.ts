@@ -29,6 +29,10 @@ export interface Question {
   correctIndex: number;
   /** Seconds players get to answer. */
   seconds: number;
+  /** Which game round it belongs to, shown on the TV. */
+  round?: string;
+  /** No fixed answer: whatever most players pick is right (set at reveal). */
+  crowd?: boolean;
 }
 
 export interface Player {
@@ -150,6 +154,7 @@ export interface RoomView {
     prompt: string;
     options: string[];
     seconds: number;
+    round: string | null;
     endsAt: number | null;
     /** Only present for the host, or for everyone once revealed. */
     correctIndex: number | null;
