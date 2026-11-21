@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useState } from "react";
 import { PartyField, StartOver } from "@/components/party";
-import { GAME_ART } from "@/components/game-art";
 import { cx, Leaderboard, TILE } from "@/components/ui";
 import { useNow, usePlayerToken, useStored } from "@/lib/client/hooks";
 import { useRoom, type ConnectionStatus, type RoomConnection } from "@/lib/client/use-room";
@@ -155,14 +154,14 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
 
       {view.phase === "lobby" && (
         <Section
-          title="You're in!"
+          title="You're in! ✅"
           body={
             remote
-              ? "Playing from afar. Keep this page open: the questions appear here when the host starts the show."
-              : "Watch the big screen. The questions appear here when the host starts the show."
+              ? "Playing from afar. Nothing to tap yet: keep this page open and the questions pop up here when the host starts the game show."
+              : "Nothing to tap yet! Keep this page open and watch the big screen. The questions pop up here when the host starts the game show."
           }
         >
-          <GameLineup />
+          <WaitingForHost />
         </Section>
       )}
 
@@ -194,7 +193,9 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
       )}
 
       {view.phase === "premiere" && (
-        <Section title="The premiere" body={`Everyone's wishes for ${EVENT.guestOfHonour} are on the big screen. Keep this page open: the game show starts right after.`} />
+        <Section title="The premiere 🎬" body={`Everyone's wishes for ${EVENT.guestOfHonour} are on the big screen. Nothing to tap yet: keep this page open and the questions pop up here when the game show starts.`}>
+          <WaitingForHost />
+        </Section>
       )}
 
       {view.phase === "messages" && (
@@ -207,22 +208,18 @@ function Controller({ room, view, token }: { room: RoomConnection; view: RoomVie
 }
 
 /** Tonight's games, shown while waiting in the lobby. */
-function GameLineup() {
+/** Makes it obvious there is nothing to press until the host starts the game show. */
+function WaitingForHost() {
   return (
-    <div>
-      <h2 className="mb-3 font-mono text-xs font-semibold uppercase tracking-[0.25em]">Tonight&apos;s games</h2>
-      <ul className="grid grid-cols-2 gap-3">
-        {EVENT.games.map((g) => {
-          const art = GAME_ART[g.id];
-          return (
-            <li key={g.id} className="party-card flex flex-col items-center p-3 text-center">
-              {art && <Image src={art.src} alt={art.alt} sizes="96px" className="h-20 w-auto object-contain" />}
-              <h3 className="mt-2 font-party text-lg leading-tight text-party-purple">{g.name}</h3>
-              <p className="mt-1 text-xs text-party-ink/75">{g.blurb}</p>
-            </li>
-          );
-        })}
-      </ul>
+    <div className="party-card flex items-center gap-4 p-5" role="status">
+      <span className="relative flex size-5 shrink-0">
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-party-mint opacity-75" />
+        <span className="relative inline-flex size-5 rounded-full bg-party-mint" />
+      </span>
+      <div>
+        <p className="font-party text-xl leading-tight text-party-purple">Waiting for the host to start…</p>
+        <p className="mt-1 text-sm text-party-ink/75">Don&apos;t close this page or sign in again. You&apos;re all set!</p>
+      </div>
     </div>
   );
 }
