@@ -177,6 +177,9 @@ export type PlayerAction =
   | { type: "join"; token: string; name: string; avatar: string; remote?: boolean }
   /** The TV's "Launch party" button: lobby → premiere only, so it needs no key. */
   | { type: "launch" }
+  /** TV on-screen controls: move the show one step forward or back (no key needed). */
+  | { type: "advance" }
+  | { type: "back" }
   | { type: "survey/submit"; token: string; name: string; answers: number[] }
   | { type: "solo/submit"; token: string; game: SoloGameId; answers: number[] }
   | { type: "answer"; token: string; optionIndex: number }

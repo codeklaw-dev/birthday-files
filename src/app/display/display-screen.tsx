@@ -75,6 +75,7 @@ function Stage() {
         </div>
       </header>
 
+      {view && view.phase !== "lobby" && view.phase !== "finished" && <TvControls view={view} send={send} />}
       <section className="relative z-10 flex min-h-0 flex-1 flex-col px-[3vw] pb-[3.5vh] pt-[2vh]">
         {!view ? (
           <p className="m-auto animate-wiggle font-party text-[5vh]">Warming up the stage…</p>
@@ -95,6 +96,56 @@ function Stage() {
         )}
       </section>
     </main>
+  );
+}
+
+/** On-screen Back / Next so the whole night can be run from the TV (→, Space and ← work too). */
+function TvControls({ view, send }: { view: RoomView; send: (a: { type: "advance" } | { type: "back" }) => Promise<{ ok: boolean }> }) {
+  const slides = view.phase === "premiere" ? premiereSlides(view.messages).length : 0;
+  const lastSlide = view.phase === "premiere" && view.slide >= slides - 1;
+  const moreQuestions = view.questionIndex + 1 < view.totalQuestions;
+  const label =
+    view.phase === "premiere"
+      ? lastSlide
+        ? "Start the games 🎮"
+        : "Next"
+      : view.phase === "question"
+        ? "Reveal now"
+        : view.phase === "reveal"
+          ? "Scores"
+          : view.phase === "cake"
+            ? "Finale 🏆"
+            : moreQuestions
+              ? "Next question"
+              : "Cake time 🎂";
+  const canBack = view.phase === "premiere" && view.slide > 0;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
+        e.preventDefault();
+        void send({ type: "advance" });
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        void send({ type: "back" });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [send]);
+
+  const btn = "inline-flex items-center gap-[0.5vw] rounded-full px-[1.6vw] py-[1.1vh] text-[2.2vh] font-bold shadow-[0_0.5vh_0_rgb(0_0_0/0.25)] transition hover:scale-105 active:translate-y-[0.3vh]";
+  return (
+    <div className="fixed bottom-[5vh] right-[2vw] z-30 flex items-center gap-[0.8vw] opacity-80 transition hover:opacity-100">
+      {canBack && (
+        <button type="button" onClick={() => void send({ type: "back" })} className={cx(btn, "bg-white/90 text-party-ink")}>
+          ◀ Back
+        </button>
+      )}
+      <button type="button" onClick={() => void send({ type: "advance" })} className={cx(btn, "bg-party-yellow text-party-ink")}>
+        {label} ▶
+      </button>
+    </div>
   );
 }
 
@@ -274,7 +325,7 @@ function Lobby({ view, joinUrl, onLaunch }: { view: RoomView; joinUrl: string | 
           disabled={launching}
           className="mt-[3vh] inline-flex w-fit -rotate-1 items-center gap-[1vw] rounded-full bg-party-yellow px-[3vw] py-[2vh] font-party text-[5.5vh] leading-none text-party-ink shadow-[0_1vh_0_rgb(94_31_107/0.6)] transition hover:scale-105 active:translate-y-[0.6vh] active:shadow-[0_0.3vh_0_rgb(94_31_107/0.6)] disabled:opacity-60"
         >
-          🚀 {launching ? "Launching…" : "Launch party"}
+          🚀 {launching ? "Starting…" : "Start here"}
         </button>
         <div className="mt-[3.5vh] font-mono text-[1.7vh] font-bold uppercase tracking-[0.3em] text-party-yellow">
           Detectives in the room · {players.length}

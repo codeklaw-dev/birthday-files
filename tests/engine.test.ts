@@ -47,8 +47,9 @@ describe("quiz round", () => {
     const wrong = (q.correctIndex + 1) % q.options.length;
     s = run(s, { type: "answer", token: "token-alice", optionIndex: q.correctIndex }, 0);
     expect(err(s, { type: "answer", token: "token-alice", optionIndex: wrong }, 10)).toMatch(/already/);
+    expect(s.phase).toBe("question");
+    // The last player to answer triggers the reveal straight away.
     s = run(s, { type: "answer", token: "token-bobby", optionIndex: wrong }, 10);
-    s = run(s, { type: "host/reveal" }, 5000);
 
     expect(s.phase).toBe("reveal");
     const alice = s.players.find((p) => p.id === idOf(s, "token-alice"))!;
@@ -229,5 +230,25 @@ describe("before the party and at your own pace", () => {
     s = run(s, { type: "host/reset" });
     expect(s.players[0].score).toBe(n * 67);
     expect(Object.keys(s.surveyResponses)).toHaveLength(3);
+  });
+});
+
+describe("TV controls", () => {
+  it("walks lobby → premiere slides → questions with advance and back", () => {
+    let s = run(twoPlayers(), { type: "advance" });
+    expect(s.phase).toBe("premiere");
+    expect(err(s, { type: "back" })).toMatch(/back/);
+    s = run(s, { type: "advance" });
+    expect(s.slide).toBe(1);
+    s = run(s, { type: "back" });
+    expect(s.slide).toBe(0);
+    while (s.phase === "premiere") s = run(s, { type: "advance" });
+    expect(s.phase).toBe("question");
+    s = run(s, { type: "advance" });
+    expect(s.phase).toBe("reveal");
+    s = run(s, { type: "advance" });
+    expect(s.phase).toBe("leaderboard");
+    s = run(s, { type: "advance" });
+    expect(s.questionIndex).toBe(1);
   });
 });

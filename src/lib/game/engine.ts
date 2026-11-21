@@ -170,7 +170,10 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       if (state.answers[playerId]) return fail("You already answered.");
       if (!Number.isInteger(action.optionIndex) || action.optionIndex < 0 || action.optionIndex >= q.options.length)
         return fail("Invalid option.");
-      return ok({ ...state, answers: { ...state.answers, [playerId]: { optionIndex: action.optionIndex, at: now } } });
+      const answered = { ...state, answers: { ...state.answers, [playerId]: { optionIndex: action.optionIndex, at: now } } };
+      // Everyone's in: reveal straight away instead of waiting for the clock.
+      if (state.players.every((p) => answered.answers[p.id])) return reveal(answered, now);
+      return ok(answered);
     }
 
     case "blow": {
@@ -257,6 +260,34 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
         phase: "leaderboard",
         hostLine: SCRIPT.leaderboard(rankPlayers(state.players)[0]?.name ?? null),
       });
+
+    case "advance": {
+      // The one obvious next step, same as the control panel's big gold button.
+      const step = (next: Action) => applyAction(state, next, ctx);
+      switch (state.phase) {
+        case "lobby":
+          return step({ type: "launch" });
+        case "premiere": {
+          const last = premiereSlides(state.messages).length - 1;
+          return (state.slide ?? 0) < last ? step({ type: "host/slide", index: (state.slide ?? 0) + 1 }) : step({ type: "host/start" });
+        }
+        case "question":
+          return step({ type: "host/reveal" });
+        case "reveal":
+          return step({ type: "host/showLeaderboard" });
+        case "leaderboard":
+        case "messages":
+          return state.questionIndex + 1 < state.questions.length ? step({ type: "host/next" }) : step({ type: "host/startCake" });
+        case "cake":
+          return step({ type: "host/finish" });
+        default:
+          return fail("The show is over.");
+      }
+    }
+
+    case "back":
+      if (state.phase === "premiere" && (state.slide ?? 0) > 0) return applyAction(state, { type: "host/slide", index: (state.slide ?? 0) - 1 }, ctx);
+      return fail("Nothing to go back to.");
 
     case "launch":
       if (state.phase !== "lobby") return fail("The party has already been launched.");
