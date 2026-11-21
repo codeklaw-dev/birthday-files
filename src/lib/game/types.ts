@@ -198,6 +198,8 @@ export type HostAction =
   | { type: "host/award"; playerId: string; delta: number; reason?: string }
   | { type: "host/kick"; playerId: string }
   | { type: "host/premiere" }
+  /** Fold copies like "Ramisa 2" into "Ramisa" (tokens, points and solo results move over). */
+  | { type: "host/dedupe" }
   | { type: "host/slide"; index: number }
   | { type: "host/moderate"; messageId: string; status: MessageStatus }
   | { type: "host/setLang"; lang: Lang | "both" };

@@ -25,12 +25,12 @@ function twoPlayers() {
 }
 
 describe("joining", () => {
-  it("adds players, de-duplicates names and lets a phone rejoin", () => {
+  it("adds players, reuses a profile for the same name and lets a phone rejoin", () => {
     let s = twoPlayers();
     s = join(s, "token-carol", "alice");
-    expect(s.players.map((p) => p.name)).toEqual(["Alice", "Bob", "alice 2"]);
+    expect(s.players.map((p) => p.name)).toEqual(["Alice", "Bob"]);
     s = join(s, "token-alice", "Alicia");
-    expect(s.players).toHaveLength(3);
+    expect(s.players).toHaveLength(2);
     expect(s.players[0].name).toBe("Alicia");
   });
 
@@ -252,3 +252,23 @@ describe("TV controls", () => {
     expect(s.questionIndex).toBe(1);
   });
 });
+
+describe("one profile per person", () => {
+  it("reuses the profile when the same name joins from another browser", () => {
+    let s = run(createRoom(), { type: "join", token: "token-ramisa-1", name: "Ramisa", avatar: "🎉" });
+    s = run(s, { type: "join", token: "token-ramisa-2", name: "ramisa", avatar: "🎉" });
+    expect(s.players).toHaveLength(1);
+    expect(s.tokens["token-ramisa-2"]).toBe(s.players[0].id);
+  });
+
+  it("merges existing copies into the original, keeping every device working", () => {
+    let s = run(createRoom(), { type: "join", token: "token-naved-1", name: "Naved", avatar: "🎉" });
+    s = { ...s, players: [...s.players, { id: "copy2", name: "Naved 2", avatar: "🎉", score: 50, joinedAt: 1 }], tokens: { ...s.tokens, "token-naved-2": "copy2" } };
+    s = run(s, { type: "host/dedupe" });
+    expect(s.players.map((p) => p.name)).toEqual(["Naved"]);
+    expect(s.players[0].score).toBe(50);
+    expect(s.tokens["token-naved-2"]).toBe(s.players[0].id);
+    expect(err(s, { type: "host/dedupe" })).toMatch(/No copies/);
+  });
+});
+

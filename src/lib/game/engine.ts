@@ -138,12 +138,21 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       const avatar = clean(action.avatar, 8) || "🎈";
       if (token.length < 8) return fail("Invalid player token.");
       if (!name) return fail("Please enter a name.");
+      const remote = action.remote === true;
+      // Same name as someone already here (e.g. the same guest on a second browser): reuse that profile, no copies.
+      const sameName = state.players.find((p) => p.name.toLowerCase() === name.toLowerCase());
+      if (sameName && state.tokens[token] !== sameName.id) {
+        return ok({
+          ...state,
+          tokens: { ...state.tokens, [token]: sameName.id },
+          players: state.players.map((p) => (p.id === sameName.id && remote ? { ...p, remote: true } : p)),
+        });
+      }
       const existingId = state.tokens[token];
       const taken = (n: string) =>
         state.players.some((p) => p.id !== existingId && p.name.toLowerCase() === n.toLowerCase());
       let unique = name;
       for (let i = 2; taken(unique); i++) unique = `${name.slice(0, LIMITS.nameLength - 2)} ${i}`;
-      const remote = action.remote === true;
       if (existingId) {
         return ok({
           ...state,
@@ -292,6 +301,36 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
     case "launch":
       if (state.phase !== "lobby") return fail("The party has already been launched.");
       return ok({ ...state, phase: "premiere", slide: 0, hostLine: SCRIPT.intro });
+
+    case "host/dedupe": {
+      const byName = new Map(state.players.map((p) => [p.name.toLowerCase(), p]));
+      const into: Record<string, string> = {};
+      for (const p of state.players) {
+        const m = /^(.*) (\d+)$/.exec(p.name);
+        const base = m && byName.get(m[1].toLowerCase());
+        if (base && base.id !== p.id) into[p.id] = base.id;
+      }
+      if (Object.keys(into).length === 0) return fail("No copies to merge.");
+      const extra: Record<string, number> = {};
+      for (const [from, to] of Object.entries(into)) extra[to] = (extra[to] ?? 0) + (state.players.find((p) => p.id === from)?.score ?? 0);
+      const solo = { ...state.solo };
+      for (const [from, to] of Object.entries(into)) {
+        if (solo[from]) solo[to] = { ...solo[from], ...solo[to] };
+        delete solo[from];
+      }
+      const answers = { ...state.answers };
+      for (const [from, to] of Object.entries(into)) {
+        if (answers[from] && !answers[to]) answers[to] = answers[from];
+        delete answers[from];
+      }
+      return ok({
+        ...state,
+        tokens: Object.fromEntries(Object.entries(state.tokens).map(([t, id]) => [t, into[id] ?? id])),
+        players: state.players.filter((p) => !into[p.id]).map((p) => (extra[p.id] ? { ...p, score: p.score + extra[p.id] } : p)),
+        solo,
+        answers,
+      });
+    }
 
     case "host/premiere":
       if (state.phase === "question") return fail("Reveal the current question first.");
