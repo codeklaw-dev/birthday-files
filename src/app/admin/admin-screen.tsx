@@ -209,6 +209,8 @@ function Premiere({ view, act }: { view: RoomView; act: Act }) {
       ? "Casper's introduction"
       : slide.kind === "outro"
         ? "The end: time for the game show"
+        : slide.kind === "flashback"
+          ? `Flashback: ${slide.fact.title}`
         : `${slide.message.author}${slide.item ? ` · ${slide.item.kind} ${slide.part} of ${slide.parts}` : " · note"}`;
 
   return (

@@ -266,8 +266,10 @@ export function applyAction(state: RoomState, action: Action, ctx: EngineCtx): A
       if (state.phase !== "premiere") return fail("Start the premiere first.");
       const slides = premiereSlides(state.messages);
       const index = Math.max(0, Math.min(slides.length - 1, Math.trunc(Number(action.index) || 0)));
-      const outro = slides[index].kind === "outro";
-      return ok({ ...state, slide: index, hostLine: outro ? SCRIPT.premiereOutro : index === 0 ? SCRIPT.intro : state.hostLine });
+      const slide = slides[index];
+      const hostLine =
+        slide.kind === "outro" ? SCRIPT.premiereOutro : slide.kind === "flashback" ? slide.fact.line : index === 0 ? SCRIPT.intro : state.hostLine;
+      return ok({ ...state, slide: index, hostLine });
     }
 
     case "host/showMessages":

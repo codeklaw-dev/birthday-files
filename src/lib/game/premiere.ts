@@ -1,3 +1,4 @@
+import { FLASHBACK, type FlashbackFact } from "@/lib/game/flashback";
 import type { MediaItem } from "@/lib/game/media";
 import type { GuestMessage } from "@/lib/game/types";
 
@@ -9,6 +10,7 @@ import type { GuestMessage } from "@/lib/game/types";
 export type Slide =
   | { kind: "intro" }
   | { kind: "wish"; message: GuestMessage; item: MediaItem | null; part: number; parts: number }
+  | { kind: "flashback"; fact: FlashbackFact }
   | { kind: "outro" };
 
 export function premiereSlides(messages: GuestMessage[]): Slide[] {
@@ -19,6 +21,7 @@ export function premiereSlides(messages: GuestMessage[]): Slide[] {
     if (media.length === 0) slides.push({ kind: "wish", message, item: null, part: 1, parts: 1 });
     else media.forEach((item, i) => slides.push({ kind: "wish", message, item, part: i + 1, parts: media.length }));
   }
+  for (const fact of FLASHBACK) slides.push({ kind: "flashback", fact });
   slides.push({ kind: "outro" });
   return slides;
 }

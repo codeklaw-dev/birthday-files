@@ -10,6 +10,7 @@ import { mediaSrc } from "@/lib/client/upload";
 import type { ConnectionStatus } from "@/lib/client/use-room";
 import type { Bilingual, Lang, Player } from "@/lib/game/types";
 import type { MediaItem } from "@/lib/game/media";
+import { FLASHBACK_DATE, type FlashbackFact } from "@/lib/game/flashback";
 import { premiereSlides, type Slide } from "@/lib/game/premiere";
 import cakeArt from "@/assets/party/cake.png";
 import discoBall from "@/assets/party/disco-ball.png";
@@ -426,6 +427,8 @@ function Premiere({ view, joinUrl }: { view: RoomView; joinUrl: string | null })
           <PremiereIntro wishes={wishCount} />
         ) : slide.kind === "outro" ? (
           <PremiereOutro joinUrl={joinUrl} />
+        ) : slide.kind === "flashback" ? (
+          <FlashbackSlide fact={slide.fact} />
         ) : (
           <WishSlide slide={slide} />
         )}
@@ -466,6 +469,45 @@ function PremiereIntro({ wishes }: { wishes: number }) {
           <p className="absolute bottom-[1.2vh] left-0 right-0 text-center font-party text-[3.2vh] text-party-purple">Happy birthday, {EVENT.guestOfHonour}!</p>
         </div>
         <Image src={partyPopper} alt="" sizes="12vw" className="absolute -bottom-[4vh] -left-[2vw] h-[16vh] w-auto animate-float" />
+      </div>
+    </div>
+  );
+}
+
+function FlashbackSlide({ fact }: { fact: FlashbackFact }) {
+  if (fact.cover) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-[3vh] text-center">
+        <span className="animate-float text-[18vh] leading-none drop-shadow-[0_1vh_0_rgb(0_0_0/0.2)]">{fact.emoji}</span>
+        <span className="-rotate-2 rounded-full bg-party-pink px-[1.8vw] py-[1vh] font-mono text-[2.4vh] font-bold uppercase tracking-[0.35em] text-white shadow-[0_0.6vh_0_rgb(0_0_0/0.25)]">
+          {fact.kicker}
+        </span>
+        <h1 className="max-w-[80vw] font-party text-[9vh] leading-[1.02] drop-shadow-[0_0.8vh_0_rgb(94_31_107/0.5)]">
+          All the cool stuff that happened on{" "}
+          <span className="inline-block animate-wiggle text-party-yellow">{FLASHBACK_DATE}</span>
+        </h1>
+        <p className="text-[3.4vh] font-semibold">{fact.body}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="grid flex-1 grid-cols-[minmax(0,0.8fr)_minmax(0,1.5fr)] items-center gap-[4vw]">
+      <div className="relative flex items-center justify-center">
+        <div className="grid aspect-square w-[30vw] max-w-full -rotate-3 place-items-center rounded-[5vh] bg-white shadow-[0_2vh_0_rgb(94_31_107/0.45)]">
+          <span className="animate-float text-[24vh] leading-none">{fact.emoji}</span>
+        </div>
+        <span className="absolute -top-[3vh] right-0 rotate-6 rounded-full bg-party-sun px-[1.4vw] py-[1vh] font-party text-[3vh] text-party-ink shadow-[0_0.6vh_0_rgb(0_0_0/0.25)]">
+          {FLASHBACK_DATE}
+        </span>
+      </div>
+      <div className="flex flex-col gap-[3vh]">
+        <span className="w-fit -rotate-1 rounded-full bg-party-pink px-[1.6vw] py-[0.9vh] font-mono text-[2.2vh] font-bold uppercase tracking-[0.3em] text-white">
+          {fact.kicker}
+        </span>
+        <h1 className="font-party text-[9vh] leading-[0.98] drop-shadow-[0_0.8vh_0_rgb(94_31_107/0.5)]">{fact.title}</h1>
+        <p className="rotate-[0.5deg] rounded-[3vh] bg-white px-[2vw] py-[2.6vh] text-[3.4vh] font-semibold leading-snug text-party-ink shadow-[0_1vh_0_rgb(0_0_0/0.2)]">
+          {fact.body}
+        </p>
       </div>
     </div>
   );
