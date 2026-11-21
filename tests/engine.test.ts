@@ -273,17 +273,22 @@ describe("one profile per person", () => {
 });
 
 
-describe("Mez Majority (crowd) questions", () => {
+describe("crowd questions (Mez on Trial, How Well Do You Know Mez?)", () => {
+  it("keeps the questions already played in place", () => {
+    const ids = createRoom().questions.map((q) => q.id);
+    expect(ids.slice(0, 5)).toEqual(["q1", "q2", "q3", "q4", "imposter-1"]);
+  });
+
   it("marks the most-picked option as correct at reveal", () => {
     let s = twoPlayers();
     const crowdAt = s.questions.findIndex((q) => q.crowd);
     expect(crowdAt).toBeGreaterThan(-1);
     s = run(s, { type: "host/start" }, 0);
     s = { ...s, questionIndex: crowdAt, questionEndsAt: 100000 };
-    s = run(s, { type: "answer", token: "token-alice", optionIndex: 2 }, 10);
-    s = run(s, { type: "answer", token: "token-bobby", optionIndex: 2 }, 20);
+    s = run(s, { type: "answer", token: "token-alice", optionIndex: 1 }, 10);
+    s = run(s, { type: "answer", token: "token-bobby", optionIndex: 1 }, 20);
     expect(s.phase).toBe("reveal");
-    expect(s.questions[crowdAt].correctIndex).toBe(2);
+    expect(s.questions[crowdAt].correctIndex).toBe(1);
     expect(s.players.every((p) => p.score > 0)).toBe(true);
   });
 });

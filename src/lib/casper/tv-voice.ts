@@ -26,6 +26,12 @@ export class TvVoiceAdapter implements CasperAdapter {
     return this.enabled;
   }
 
+  /** True while Casper is talking, so voice mode doesn't listen to itself. */
+  get isSpeaking(): boolean {
+    const clip = !!this.audio && !this.audio.paused && !this.audio.ended && this.audio.currentTime > 0.05;
+    return clip || (typeof window !== "undefined" && "speechSynthesis" in window && window.speechSynthesis.speaking);
+  }
+
   /** Call from a click: unlocks audio (and the fallback voice) for this page. */
   enable(): void {
     this.enabled = true;

@@ -12,6 +12,7 @@ import type { Bilingual, Lang, Player } from "@/lib/game/types";
 import type { MediaItem } from "@/lib/game/media";
 import { FLASHBACK_DATE, type FlashbackFact } from "@/lib/game/flashback";
 import { premiereSlides, type Slide } from "@/lib/game/premiere";
+import { VoiceMode } from "./voice-mode";
 import cakeArt from "@/assets/party/cake.png";
 import discoBall from "@/assets/party/disco-ball.png";
 import logo from "@/assets/party/logo.png";
@@ -70,7 +71,7 @@ function Stage() {
           <span className="-rotate-1 rounded-full bg-party-sun px-[1.2vw] py-[0.8vh] text-party-ink shadow-[0_0.4vh_0_rgb(0_0_0/0.2)]">
             {view?.players.length ?? 0} players
           </span>
-          {view && <VoiceToggle line={view.hostLine} lang={view.hostLang} />}
+          <VoiceMode fallback={view ? <VoiceToggle line={view.hostLine} lang={view.hostLang} /> : null} />
           <LivePill status={status} />
         </div>
       </header>

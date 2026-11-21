@@ -1,5 +1,6 @@
 import "server-only";
 import { SOLO_GAMES } from "./solo-content";
+import { SURVEY_QUESTIONS } from "./survey-content";
 import type { Question } from "./types";
 
 /**
@@ -39,25 +40,24 @@ export const MOCK_QUESTIONS: Question[] = [
     seconds: 20,
     round: "Birthday Trivia",
   },
-  // Then the party versions of the invite games, with the same questions.
-  ...(["imposter", "mystery"] as const).flatMap((game) =>
-    SOLO_GAMES[game].questions.map((q, i) => ({
-      id: `${game}-${i + 1}`,
-      prompt: q.prompt,
-      options: q.options,
-      correctIndex: q.correctIndex ?? 0,
-      seconds: 20,
-      round: game === "imposter" ? "Mez Imposter" : "Mystery Files",
-    })),
-  ),
-  // Mez Majority: no right answer, the room decides. Whatever most people pick wins.
+  // Then the invite games, played live. Order matters: questions already played keep their place.
+  ...SOLO_GAMES.imposter.questions.map((q, i) => live(`imposter-${i + 1}`, "Mez Imposter", q.prompt, q.options, q.correctIndex ?? 0)),
+  live("imposter-4", "Mez Imposter", "Which of these is NOT a real way to say happy birthday?", ["Joyeux anniversaire", "Feliz cumpleaños", "Shubho jonmodin", "Happy cakeday-doo"], 3),
+  live("imposter-5", "Mez Imposter", "Spot the fake party fact.", ["Balloons were first made from animal bladders", "Party poppers were invented in the 1900s", "Confetti comes from an Italian word", "Disco balls were invented on the Moon"], 3),
+  // Mez on Trial: the jury (everyone's phones) decides. Majority verdict wins.
+  ...SOLO_GAMES.trial.questions.map((q, i) => crowd(`trial-${i + 1}`, "Mez on Trial", q.prompt, q.options)),
+  crowd("trial-4", "Mez on Trial", "Mez stands accused of taking 100 selfies to post just one.", ["Guilty", "Not guilty"]),
+  crowd("trial-5", "Mez on Trial", "Mez stands accused of eating the last slice of cake and blaming someone else.", ["Guilty", "Not guilty"]),
+  crowd("trial-6", "Mez on Trial", "Mez stands accused of being the best friend anyone could ask for.", ["Guilty", "Not guilty"]),
+  // How Well Do You Know Mez? No fixed answers: whatever most of the room picks wins.
+  ...SURVEY_QUESTIONS.map((q) => crowd(`know-${q.id}`, "How Well Do You Know Mez?", q.prompt, q.options)),
   {
     id: "majority-1",
     prompt: "What would Mez order for her dream birthday breakfast?",
     options: ["Fluffy pancakes", "A full English", "Croissant and coffee", "Leftover birthday cake"],
     correctIndex: 0,
     seconds: 20,
-    round: "Mez Majority",
+    round: "How Well Do You Know Mez?",
     crowd: true,
   },
   {
@@ -66,7 +66,7 @@ export const MOCK_QUESTIONS: Question[] = [
     options: ["Chocolate lava cake", "Strawberry cheesecake", "Rasgulla", "An ice cream sundae"],
     correctIndex: 0,
     seconds: 20,
-    round: "Mez Majority",
+    round: "How Well Do You Know Mez?",
     crowd: true,
   },
   {
@@ -75,7 +75,7 @@ export const MOCK_QUESTIONS: Question[] = [
     options: ["A Bollywood classic", "A Taylor Swift anthem", "An ABBA banger", "All three, back to back"],
     correctIndex: 0,
     seconds: 20,
-    round: "Mez Majority",
+    round: "How Well Do You Know Mez?",
     crowd: true,
   },
   {
@@ -84,7 +84,7 @@ export const MOCK_QUESTIONS: Question[] = [
     options: ["Making everyone laugh", "Finding the best food spots", "Never forgetting a birthday", "Getting ready in five minutes"],
     correctIndex: 0,
     seconds: 20,
-    round: "Mez Majority",
+    round: "How Well Do You Know Mez?",
     crowd: true,
   },
   {
@@ -93,7 +93,7 @@ export const MOCK_QUESTIONS: Question[] = [
     options: ["A beach in the Maldives", "A city break in Paris", "The Swiss mountains", "A road trip with friends"],
     correctIndex: 0,
     seconds: 20,
-    round: "Mez Majority",
+    round: "How Well Do You Know Mez?",
     crowd: true,
   },
   {
@@ -102,7 +102,7 @@ export const MOCK_QUESTIONS: Question[] = [
     options: ["😂", "✨", "💅", "🥰"],
     correctIndex: 0,
     seconds: 20,
-    round: "Mez Majority",
+    round: "How Well Do You Know Mez?",
     crowd: true,
   },
   {
@@ -111,7 +111,7 @@ export const MOCK_QUESTIONS: Question[] = [
     options: ["First on the dance floor", "Taking all the photos", "Chatting in the kitchen", "Hosting like a pro"],
     correctIndex: 0,
     seconds: 20,
-    round: "Mez Majority",
+    round: "How Well Do You Know Mez?",
     crowd: true,
   },
   {
@@ -120,8 +120,21 @@ export const MOCK_QUESTIONS: Question[] = [
     options: ["Iconic", "Sweet", "Chaotic", "Fabulous"],
     correctIndex: 0,
     seconds: 20,
-    round: "Mez Majority",
+    round: "How Well Do You Know Mez?",
     crowd: true,
   },
+  // Mystery Files: read the clue, name the item.
+  ...SOLO_GAMES.mystery.questions.map((q, i) => live(`mystery-${i + 1}`, "Mystery Files", q.prompt, q.options, q.correctIndex ?? 0)),
+  live("mystery-4", "Mystery Files", "Clue: you wear it on your head and it has a stretchy string under your chin. What is it?", ["A crown", "A party hat", "Headphones", "A tiara"], 1),
+  live("mystery-5", "Mystery Files", "Clue: you blow into it, it unrolls with a squeak. What is it?", ["A whistle", "A balloon", "A party blower", "A kazoo"], 2),
 ];
 
+
+function live(id: string, round: string, prompt: string, options: string[], correctIndex: number): Question {
+  return { id, prompt, options, correctIndex, seconds: 20, round };
+}
+
+/** No fixed answer: the most-picked option wins (see reveal in engine.ts). */
+function crowd(id: string, round: string, prompt: string, options: string[]): Question {
+  return { id, prompt, options, correctIndex: 0, seconds: 20, round, crowd: true };
+}
